@@ -59,6 +59,15 @@ for (const [k, o] of Object.entries({domyslna: {}, szeroka_niska: {width: 120, h
   for (let i = 0; i < kp.length; i += 3) { x0 = Math.min(x0, kp[i]); x1 = Math.max(x1, kp[i]); y0 = Math.min(y0, kp[i + 1]); y1 = Math.max(y1, kp[i + 1]); z0 = Math.min(z0, kp[i + 2]); z1 = Math.max(z1, kp[i + 2]); }
   out.dyn_var[k] = {P: o, w: Math.max(x1 - x0, z1 - z0), h: y1 - y0, warn: res.warn, tris: res.parts.reduce((a, q) => a + q.m.i.length / 3, 0)};
 }
+// --- regresja: siatka obliczen nie moze obcinac szerokich korpusow i czapek (kiedys oś Y miala stale +-21 mm: dziura w korpusie szerszym niz ~44 mm)
+out.clip = {};
+for (const [k, id, o, part] of [['krolik_44', 'krolik', {bodyW: 44}, 'korpus'], ['krolik_52', 'krolik', {bodyW: 52}, 'korpus'], ['kot_52', 'kot', {bodyW: 52}, 'korpus'],
+                                ['krasnal_hat26', 'krasnal', {hatRb: 26}, 'czapka'], ['mikolaj_hat26', 'mikolaj', {hatRb: 26}, 'czapka']]) {
+  const res = X.buildModel(id, Object.assign(X.defaults(id), o), {draft: true, lo: true}), q = res.parts.find(r => r.name === part) || res.parts[0], p = q.m.p;
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (let i = 0; i < p.length; i += 3) { x0 = Math.min(x0, p[i]); x1 = Math.max(x1, p[i]); z0 = Math.min(z0, p[i + 2]); z1 = Math.max(z1, p[i + 2]); }
+  out.clip[k] = {o, xs: x1 - x0, zs: z1 - z0, z_lo: z0, z_hi: z1};
+}
 // --- dym: wszystkie modele, szkic (vox 1,0): brak wyjatkow, brak NaN, liczba trojkatow i wymiary
 out.smoke = {};
 for (const id of X.ORDER) {

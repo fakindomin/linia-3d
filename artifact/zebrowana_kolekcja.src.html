@@ -623,7 +623,7 @@ function buildReal(id,P,opt){
   if(F.kind==='egg')return buildEgg(id,P,vox,ex,parts,warn,opt);
   /* figurka na korpusie bazowym */
   const B=bunDef(P),tilt=P.earTilt*D2R,frameFn=side=>mountFrame(side,B.P0(side),tilt);
-  const cres=opt.lo||opt.draft?0.2:0.1;let spec=F.ears?earSpec(F.ears,P,cres):null,xh=Math.max(21,B.R+2.5),ylo=-21,yhi=21,zhi=B.P0(1)[2]+6;
+  const cres=opt.lo||opt.draft?0.2:0.1;let spec=F.ears?earSpec(F.ears,P,cres):null,xh=Math.max(21,B.R+2.5),ylo=-xh,yhi=xh,zhi=B.P0(1)[2]+6;
   if(spec)zhi=Math.max(zhi,B.P0(1)[2]+spec.L*Math.cos(tilt)+6);
   if(F.ears==='ant')xh=Math.max(28,B.P0(1)[0]+spec.ar(1)[1]*Math.cos(tilt)+3);
   if(F.tail){yhi=Math.max(yhi,12+P.tailL*Math.sin(P.tailA*D2R)+P.tailR+3);zhi=Math.max(zhi,14+P.tailL*Math.cos(P.tailA*D2R)+P.tailR+3);}
@@ -645,7 +645,7 @@ function buildReal(id,P,opt){
     const amp=B.amp,RCV=B.HR+amp+0.45,E35=35*D2R,zt=B.HC+RCV*Math.cos(E35),rt=RCV*Math.sin(E35);
     const zb=B.HC+1.5,Rb=P.hatRb;
     const h=mkHat(F.hat,zb,P.hatTop,Rb,nRibs(Rb),0,P.hatP,P);
-    const G2=mkGrid(-24,24,-24,24,zb-1,P.hatTop+1,vox);
+    const h2=Math.max(24,Rb+B.amp+3),G2=mkGrid(-h2,h2,-h2,h2,zb-1,P.hatTop+1,vox);
     hatField(G2,h,amp,B.pw,'set');planeZ(G2,zb,P.hatTop);
     cutLathe(G2,z=>{const r=z<zt?Math.sqrt(Math.max(RCV*RCV-(z-B.HC)*(z-B.HC),0)):rt-(z-zt)/Math.tan(E35);return z<zt+Math.tan(E35)*(rt-3)?r:-1;});
     cutSockets(G,frameFn);

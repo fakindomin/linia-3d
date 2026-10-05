@@ -147,6 +147,13 @@ for name, v in DV.items():
     check(f"  {name}: wysokosc korpusu = {hexp}", abs(v["h"] - hexp), 1.0)
     ok &= not v["warn"]
 
+# --- regresja: obciecie siatki obliczen (szeroki korpus / czapka musza byc symetryczne w X i w osi glebokosci)
+print("regresja: brak obciecia szerokich korpusow i czapek:")
+for k, v in J["clip"].items():
+    check(f"  {k}: |szerokosc X - glebokosc| (obciecie siatki = dziura)", abs(v["xs"] - v["zs"]), 1.0)
+check("  krolik_52: szerokosc ~ 52 + rowek", abs(J["clip"]["krolik_52"]["xs"] - 52.8), 1.0)
+check("  krasnal_hat26: szerokosc czapki ~ 52 (hatRb 26, siatka 1 mm)", abs(J["clip"]["krasnal_hat26"]["xs"] - 52.0), 1.5)
+
 # --- dym: wszystkie modele
 print("test dymny (szkic 1 mm):")
 for k, v in J["smoke"].items():

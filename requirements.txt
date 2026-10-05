@@ -1,0 +1,11 @@
+numpy
+scipy
+scikit-image
+trimesh
+shapely
+manifold3d
+fast-simplification
+pillow
+networkx
+rtree
+matplotlib

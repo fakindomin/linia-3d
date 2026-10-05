@@ -125,6 +125,8 @@ Zmiana stałej/profilu: edytuj Python → `export_line_json.py` → `build_artif
 * Siatki STL z przeglądarki (zakładka Zapis) to **siatki robocze** (surface nets, nie gwarantują szczelności); do druku używać plików z `out/`.
 * Dynia w artefakcie: N = 92, zanik żeber (12, 28) — odchylenie jak w skrypcie `build_pumpkin.py` (profil grzbietu `Rp`, a≈50, vs profil pola S_FINE, a≈49,2).
 * Miotła bałwana jest tylko w Pythonie (nie ma jej w podglądzie).
+* Dynia w podglądzie ma osobną szerokość (po grzbietach żeber) i wysokość bryły; profil jest skalowany osobno w poziomie i w pionie, N żeber rośnie z szerokością (rozstaw 3,4 mm zostaje), port ogonka jedzie z górą bryły. Domyślnie (100 × 65 mm) = skrypt Pythona; inne rozmiary istnieją tylko w podglądzie (siatka robocza).
+* Jajko w podglądzie: **wnętrze i szew są stałe, obrys jest swobodny.** Wnęka miseczki i czapki, szew, kołnierz, sufit (52°) liczą się z powłoki odniesienia (domyślny kształt jajka), a nie z obrysu. Obrys (szerokość, wysokość, wysokość najszerszego miejsca, pełność dołu i góry) = `max(kształt, wnętrze + ścianka)`: miseczka ≥ `wallCup`, czapka ≥ 2,6 mm, kołnierz ≥ 2,0 mm, dobudowa ze spadkiem ≤ 1,3 (bez ostrzejszych nawisów); gdy kształt jest za chudy, podgląd ostrzega. Wniosek: jajko niespodzianka 44 × 68 mm pasuje tak samo w każdym wariancie, a miseczki i czapki różnych wariantów są wymienne. Test: `test_artifact.py` (wnęka identyczna z domyślną, ścianka ≥ minimum). Skrypty Pythona mają jeden obrys (standardowy).
 
 ## 10. Pliki
 

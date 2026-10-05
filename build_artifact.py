@@ -50,16 +50,18 @@ h = sub1(h, "const RIBS={ribs:36,ribDepth:1.6,ribPow:.8};",
          "const RIBS={ribs:LINE.models.krolik.params.ribs,ribDepth:LINE.models.krolik.params.ribDepth,ribPow:LINE.models.krolik.params.ribPow};", "RIBS")
 h = sub1(h, "const BUN={bodyW:38,bodyHz:52,bodyN:2.5,headR:16,headZ:105,blend:20,earTilt:14,earX:6,earT:5.5,ringH:.7,detach:0,explode:0};",
          "const BUN=Object.assign({},LINE.models.krolik.params,{earT:5.5,ringH:.7,detach:0,explode:0});", "BUN")
-h = sub1(h, "const EGGD={eggW:56,eggH:89.5,seam:34,cavR:24,floor:4.5,lipH:7,wallCup:3.3,ceilZ:76,ribs:48,ribDepth:1.6,ribPow:.8,explode:30,earTilt:14,earX:6,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0};",
-         "const EGGD=Object.assign({},LINE.models.jajko.params,{explode:30,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0});", "EGGD")
+h = sub1(h, "const EGG_REF={W:56,H:89.5,NL:2.2,NU:1.9};",
+         "const EGG_REF={W:LINE.models.jajko.params.eggW,H:LINE.models.jajko.params.eggH,NL:2.2,NU:1.9};", "EGG_REF")
+h = sub1(h, "const EGGD={eggW:56,eggH:89.5,eggZ:34,eggNL:2.2,eggNU:1.9,seam:34,cavR:24,floor:4.5,lipH:7,wallCup:3.3,ceilZ:76,ribs:48,ribDepth:1.6,ribPow:.8,explode:30,earTilt:14,earX:6,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0};",
+         "const EGGD=Object.assign({},LINE.models.jajko.params,{eggZ:LINE.models.jajko.params.seam,eggNL:EGG_REF.NL,eggNU:EGG_REF.NU,explode:30,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0});", "EGGD")
 
 # 5. dynia i balwan: modele 'line'
 h = sub1(h, "/* ===== definicje modeli ===== */", core_js + "\n/* ===== definicje modeli ===== */", "line_core")
 dyn_old = re.search(r"  dynia:\{n:'Dynia'.*\n  balwan:\{n:'Bałwan'.*\n", h)
 assert dyn_old, "brak wpisow dynia/balwan w M"
 dyn_new = (
-    "  dynia:{n:'Dynia',desc:'Szeroka, spłaszczona bryła 100 × 100 mm z gniazdem i wymiennym ogonkiem. Profil i żebra (N = 92) z linii.',"
-    "f:{real:1,kind:'line'},g:['lineBody','lineRib','lineParts'],files:['korpus','ogonek'],d:{scale:1,ribDepth:1.6,ribPow:.8,explode:0}},\n"
+    "  dynia:{n:'Dynia',desc:'Szeroka, spłaszczona bryła 100 × 65 mm (bez ogonka) z gniazdem i wymiennym ogonkiem. Szerokość i wysokość ustawiasz osobno, żebra zachowują rozstaw 3,4 mm.',"
+    "f:{real:1,kind:'line'},g:['lineBodyWH','lineRib','lineParts'],files:['korpus','ogonek'],d:{width:lineW0('dynia'),height:LINE.models.dynia.H,ribDepth:1.6,ribPow:.8,explode:0}},\n"
     "  balwan:{n:'Bałwan',desc:'Trzy żebrowane kule z kapeluszem w jednej bryle, gniazda na nos i miotłę. Profil, żebra (52 / 42 / 32 / 24) i porty z linii; "
     "w podglądzie jest nos, miotła tylko w skryptach.',"
     "f:{real:1,kind:'line'},g:['lineBody','lineRib','lineParts'],files:['korpus','nos'],d:{scale:1,ribDepth:1.6,ribPow:.8,explode:0}}\n")
@@ -80,6 +82,9 @@ h = sub1(h, "  const F=M[id].f;\n  if(F.kind==='egg'&&F.real)return[id+'_miseczk
 h = sub1(h, "const GR={\n",
          "const GR={\n"
          "  lineBody:{t:'Bryła',items:[{k:'scale',l:'Skala bryły (żebra zachowują rozstaw)',min:.5,max:1.5,step:.01,f:'pct'}]},\n"
+         "  lineBodyWH:{t:'Bryła',items:[\n"
+         "    {k:'width',l:'Szerokość (po grzbietach żeber)',min:60,max:140,step:.5,f:'mm'},\n"
+         "    {k:'height',l:'Wysokość bryły (bez ogonka)',min:40,max:100,step:.5,f:'mm'}]},\n"
          "  lineRib:{t:'Żebra',items:[\n"
          "    {k:'ribDepth',l:'Głębokość rowków (łącznie)',min:0,max:3.2,step:.1,f:'mm'},\n"
          "    {k:'ribPow',l:'Ostrość żeber (mniej = ostrzejsze)',min:.3,max:1.6,step:.05,f:'num'}]},\n"

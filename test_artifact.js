@@ -36,6 +36,29 @@ for (const id of ['dynia', 'balwan']) {
   out['grid_' + id] = gridOut(r.G);
   out['grid_' + id].H = r.S.H;
 }
+// --- jajko: warianty OBRYSU przy tym samym wnetrzu (wneka i szew nie moga sie zmienic, scianka nie cienszej niz minimum)
+{
+  const P0 = X.defaults('jajko'), zs = [];
+  for (let z = 0; z <= 125; z += 0.37) zs.push(z);
+  const V = {domyslny: {}, szeroki: {eggW: 66, eggH: 100, eggZ: 42, eggNL: 2.8, eggNU: 1.5}, chudy: {eggW: 55, eggH: 84, eggZ: 26, eggNL: 1.7, eggNU: 3.0},
+             ostry: {eggW: 60, eggH: 110, eggZ: 30, eggNL: 2.2, eggNU: 1.3}};
+  out.egg_var = {zs};
+  for (const k in V) {
+    const P = Object.assign({}, P0, V[k], {explode: 0}), E = X.eggDef(P), res = X.buildModel('jajko', P, {draft: true, lo: true});
+    let nan = 0; for (const q of res.parts) for (const v of q.m.p) if (!isFinite(v)) nan++;
+    const d = X.finalize(res.parts);
+    out.egg_var[k] = {P: V[k], cup: zs.map(E.cupCav), cap: zs.map(E.capCav), R: zs.map(E.R), Rshape: zs.map(E.Rshape), deficit: E.deficit, Hout: E.Hout,
+      floor: E.floor, ZS: E.ZS, Z0: E.Z0, ZL: E.ZL, ceil: E.ceil, wallCup: E.wallCup, P0: [E.P0(1), E.P0(-1)], warn: res.warn, nan, w: d.w, h: d.h, tris: res.parts.reduce((a, q) => a + q.m.i.length / 3, 0)};
+  }
+}
+// --- dynia: warianty szerokosci i wysokosci (korpus: wymiary z siatki)
+out.dyn_var = {};
+for (const [k, o] of Object.entries({domyslna: {}, szeroka_niska: {width: 120, height: 50}, waska_wysoka: {width: 70, height: 80}})) {
+  const P = Object.assign(X.defaults('dynia'), o), res = X.buildModel('dynia', P, {draft: true, lo: true}), kp = res.parts.find(q => q.name === 'korpus').m.p;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (let i = 0; i < kp.length; i += 3) { x0 = Math.min(x0, kp[i]); x1 = Math.max(x1, kp[i]); y0 = Math.min(y0, kp[i + 1]); y1 = Math.max(y1, kp[i + 1]); z0 = Math.min(z0, kp[i + 2]); z1 = Math.max(z1, kp[i + 2]); }
+  out.dyn_var[k] = {P: o, w: Math.max(x1 - x0, z1 - z0), h: y1 - y0, warn: res.warn, tris: res.parts.reduce((a, q) => a + q.m.i.length / 3, 0)};
+}
 // --- dym: wszystkie modele, szkic (vox 1,0): brak wyjatkow, brak NaN, liczba trojkatow i wymiary
 out.smoke = {};
 for (const id of X.ORDER) {

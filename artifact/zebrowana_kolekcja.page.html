@@ -578,23 +578,35 @@ function hatField(G,h,amp,pw,mode){latheField(G,{R:h.R,N:h.N,amp,pow:pw,w:h.w,mo
 
 /* ---- jajko ---- */
 function eggDef(P){
-  const E={RMAX:P.eggW/2,ZM:P.seam,H:P.eggH,NL:2.2,NU:1.9,Rcav:P.cavR,floor:P.floor,lipH:P.lipH,wallCup:P.wallCup,lipWall:1.2,clR:0.25,clZ:0.2,wcap:2.6,ceil:P.ceilZ,Rtop:LINE.models.jajko.cone.R_TOP,
+  const SL=1.3;   /* największe nachylenie obrysu dobudowanego do wnętrza (dr/dz): jak sufity wnęk, bez nawisów ostrzejszych niż 52° */
+  const E={H:P.eggH,ZM:P.eggZ,Rcav:P.cavR,floor:P.floor,lipH:P.lipH,wallCup:P.wallCup,lipWall:1.2,clR:0.25,clZ:0.2,wcap:2.6,ceil:P.ceilZ,Rtop:LINE.models.jajko.cone.R_TOP,
     n:Math.round(P.ribs),amp:P.ribDepth/2,pw:P.ribPow};
-  E.ALOW=E.ZM/0.9;E.AUP=E.H-E.ZM;E.ZS=E.ZM;E.Z0=E.ZS+E.clZ;E.Rlip=E.Rcav+E.lipWall;E.Rbore=E.Rlip+E.clR;E.ZL=E.ZS+E.lipH;
+  E.ZS=P.seam;E.Z0=E.ZS+E.clZ;E.Rlip=E.Rcav+E.lipWall;E.Rbore=E.Rlip+E.clR;E.ZL=E.ZS+E.lipH;
   E.cone=LINE.models.jajko.cone.slope;E.ZA=E.ceil-(E.Rcav-E.Rtop)/E.cone;
-  E.R=z=>{
-    if(z<=E.ZM){const ul=clamp((E.ZM-z)/E.ALOW,0,1);return E.RMAX*Math.pow(Math.max(1-Math.pow(ul,E.NL),0),1/E.NL);}
-    const uu=clamp((z-E.ZM)/E.AUP,0,1);return E.RMAX*Math.pow(Math.max(1-Math.pow(uu,E.NU),0),1/E.NU);
-  };
-  E.cupCav=z=>(z>=E.floor&&z<=E.ZS+E.lipH+0.01)?Math.min(E.R(z)-E.wallCup,E.Rcav):-1;
+  const sup=(RM,ZM,H,NL,NU)=>z=>{
+    if(z<=ZM){const ul=clamp((ZM-z)/(ZM/0.9),0,1);return RM*Math.pow(Math.max(1-Math.pow(ul,NL),0),1/NL);}
+    const uu=clamp((z-ZM)/(H-ZM),0,1);return RM*Math.pow(Math.max(1-Math.pow(uu,NU),0),1/NU);};
+  /* WNĘTRZE I SZEW: wyliczane z powłoki odniesienia (EGG_REF, szew, wnęka, dno, sufit), NIE z obrysu zewnętrznego.
+     Dzięki temu jajko niespodzianka i połączenie miseczka/czapka pasują tak samo przy każdym kształcie zewnętrznym. */
+  E.Rref=sup(EGG_REF.W/2,E.ZS,EGG_REF.H,EGG_REF.NL,EGG_REF.NU);
+  E.cupCav=z=>(z>=E.floor&&z<=E.ZS+E.lipH+0.01)?Math.min(E.Rref(z)-E.wallCup,E.Rcav):-1;
+  const capBody=z=>Math.min(Math.min(E.Rcav,E.Rref(z)-E.wcap),E.Rcav-Math.max(z-E.ZA,0)*E.cone);
   E.capCav=z=>{
-    const cone=E.Rcav-Math.max(z-E.ZA,0)*E.cone;
-    const body=(z>=E.ZL&&z<E.ceil)?Math.min(Math.min(E.Rcav,E.R(z)-E.wcap),cone):-1;
+    const body=(z>=E.ZL&&z<E.ceil)?capBody(z):-1;
     const bore=(z>=E.Z0&&z<=E.ZL+0.5)?E.Rbore:-1;
     return Math.max(body,bore);
   };
+  /* OBRYS ZEWNĘTRZNY: kształt wybrany suwakami, ale nigdy cieńszy niż wnętrze + minimalna ścianka (miseczka: wallCup, czapka: 2,6, kołnierz: 2,0).
+     Poza zakresem wnęki obrys schodzi do zera ze spadkiem SL, żeby nie było uskoków. Przy domyślnym kształcie obrys = powłoka odniesienia. */
+  E.Rshape=sup(P.eggW/2,E.ZM,E.H,P.eggNL,P.eggNU);
+  const pieces=[[E.floor,E.ZS,z=>E.cupCav(z)+E.wallCup],[E.Z0,E.ZL+0.5,()=>E.Rbore+2.0],[E.ZL,E.ceil-1e-6,z=>capBody(z)+E.wcap]];
+  E.need=z=>{let r=0;for(const[a,b,f]of pieces){const v=z<a?f(a)-SL*(a-z):z>b?f(b)-SL*(z-b):f(z);if(v>r)r=v;}return r;};
+  E.R=z=>Math.max(E.Rshape(z),E.need(z));
+  E.Hout=Math.max(E.H,E.ceil+(capBody(E.ceil-1e-6)+E.wcap)/SL);
+  E.RMAX=0;E.deficit=0;
+  for(let z=0;z<=E.Hout;z+=0.25){E.RMAX=Math.max(E.RMAX,E.R(z));E.deficit=Math.max(E.deficit,E.need(z)-E.Rshape(z));}
   const r0=Math.hypot(P.earX,Y0);
-  E.P0=side=>{let lo=E.ZM,hi=E.H;for(let i=0;i<60;i++){const m=(lo+hi)/2;if(E.R(m)>r0)lo=m;else hi=m;}return[side*P.earX,Y0,(lo+hi)/2];};
+  E.P0=side=>{let lo=E.ZM,hi=E.Hout;for(let i=0;i<60;i++){const m=(lo+hi)/2;if(E.R(m)>r0)lo=m;else hi=m;}return[side*P.earX,Y0,(lo+hi)/2];};
   E.sdf=(x,y,z)=>{const R=E.R(z),dR=(E.R(z+0.3)-E.R(z-0.3))/0.6;return(R+E.amp*0.6-Math.sqrt(x*x+y*y))/Math.sqrt(1+dR*dR);};
   return E;
 }
@@ -683,7 +695,7 @@ function buildEgg(id,P,vox,ex,parts,warn,opt0){
    cutLathe(G,E.cupCav);planeZ(G,0,E.ZS+E.lipH);
    parts.push({name:'miseczka',m:meshFromGrid(G),g:'miseczka'});}
   /* czapka */
-  const kind=F.cap;let ztop=E.H+2.5;
+  const kind=F.cap;let ztop=E.Hout+2.5;
   if(kind==='krasnal'||kind==='mikolaj')ztop=P.hatTop+2;
   if(kind==='chick')ztop=101;
   if(kind==='ears')ztop=E.P0(1)[2]+P.earL+4;
@@ -715,7 +727,7 @@ function buildEgg(id,P,vox,ex,parts,warn,opt0){
   /* uwagi */
   let wc=1e9;for(let z=E.floor;z<=E.ZL;z+=0.5){const c=E.cupCav(z);if(c>0)wc=Math.min(wc,E.R(z)-c-E.amp);}
   let wp=1e9;for(let z=E.ZL;z<E.ceil;z+=0.5){const c=E.capCav(z);if(c>0)wp=Math.min(wp,E.R(z)-c-E.amp);}
-  if(E.Rcav>E.RMAX-1.2)warn.push('Wnęka jest prawie tak szeroka jak jajko. Zwiększ szerokość albo zmniejsz promień wnęki.');
+  if(E.deficit>0.02)warn.push('Obrys jest za chudy dla wnętrza o '+E.deficit.toFixed(1).replace('.',',')+' mm: ścianka jest tam pogrubiona do minimum, a wnętrze zostaje bez zmian. Zwiększ szerokość lub wysokość.');
   else if(wc<1.6)warn.push('Ścianka miseczki ma '+Math.max(0,wc).toFixed(1).replace('.',',')+' mm. Zmniejsz wnękę.');
   else if(wp<1.2)warn.push('Ścianka czapki ma '+Math.max(0,wp).toFixed(1).replace('.',',')+' mm. Zmniejsz wnękę.');
   if(E.ceil>E.H-1.6)warn.push('Sufit wnęki jest za blisko czubka jajka.');
@@ -748,14 +760,18 @@ function latheBands(G,o){
     }
   }
 }
+/* szerokość domyślna = średnica po grzbietach żeber (2 * promień profilu + głębokość rowków z linii) */
+function lineW0(id){let m=0;for(const p of LINE.models[id].R)if(p[1]>m)m=p[1];return 2*m+2*LINE.models[id].ribs.amp;}
+/* skala: albo jedna (P.scale, bałwan), albo osobno szerokość (sw, z P.width) i wysokość (sh, z P.height) (dynia); N żeber rośnie z szerokością, rozstaw zostaje */
 function lineSpec(id,P){
-  const L=LINE.models[id],s=P.scale,R0=lineTab(id),sc=a=>a&&a.map(x=>x*s);
-  let rmax=0;for(const p of L.R)if(p[1]>rmax)rmax=p[1];
+  const L=LINE.models[id],R0=lineTab(id);
+  let rmax0=0;for(const p of L.R)if(p[1]>rmax0)rmax0=p[1];
+  const sw=P.width!=null?(P.width-P.ribDepth)/(2*rmax0):P.scale,sh=P.height!=null?P.height/L.H:P.scale,sc=a=>a&&a.map(x=>x*sh);
   const ports={};
-  for(const k in L.ports){const f=L.ports[k].frame;ports[k]={O:f.O.map(x=>x*s),A:f.A,B:f.B,C:f.C};}
-  const S={L,s,H:L.H*s,rmax:rmax*s,R:z=>s*R0(z/s),ports,
-    bands:L.ribs.bands.map(b=>({N:Math.max(1,Math.round(b.N*s)),up:sc(b.up),down:sc(b.down)})),fade:L.ribs.fade,top:null};
-  if(L.top){const T=L.top,rs=T.R_SH*s;S.top=rho=>{const q=Math.min(rho/rs,1);return s*T.H_TOP-s*T.DIP*Math.pow(1-q*q,1.5);};}
+  for(const k in L.ports){const f=L.ports[k].frame;ports[k]={O:[f.O[0]*sw,f.O[1]*sw,f.O[2]*sh],A:f.A,B:f.B,C:f.C};}
+  const S={L,s:sw,sw,sh,H:L.H*sh,rmax:rmax0*sw,R:z=>sw*R0(z/sh),ports,
+    bands:L.ribs.bands.map(b=>({N:Math.max(1,Math.round(b.N*sw)),up:sc(b.up),down:sc(b.down)})),fade:L.ribs.fade,top:null};
+  if(L.top){const T=L.top,rs=T.R_SH*sw;S.top=rho=>{const q=Math.min(rho/rs,1);return sh*T.H_TOP-sh*T.DIP*Math.pow(1-q*q,1.5);};}
   /* przybliżona odległość do koperty korpusu (do przycinania dodatków): promień + ENV_PAD / normalna, a nad dnem zagłębienia wysokość */
   S.sdf=(x,y,z)=>{const R=S.R(z),dR=(S.R(z+0.3)-S.R(z-0.3))/0.6;let d=(R+LINE.const.ENV_PAD*0.6-Math.sqrt(x*x+y*y))/Math.sqrt(1+dR*dR);
     if(S.top)d=Math.min(d,S.top(Math.sqrt(x*x+y*y))+LINE.const.PAD_MIN-z);return d;};
@@ -808,7 +824,8 @@ function buildLine(id,P,vox,ex,parts,warn){
 /* ===== definicje modeli ===== */
 const RIBS={ribs:LINE.models.krolik.params.ribs,ribDepth:LINE.models.krolik.params.ribDepth,ribPow:LINE.models.krolik.params.ribPow};
 const BUN=Object.assign({},LINE.models.krolik.params,{earT:5.5,ringH:.7,detach:0,explode:0});
-const EGGD=Object.assign({},LINE.models.jajko.params,{explode:30,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0});
+const EGG_REF={W:LINE.models.jajko.params.eggW,H:LINE.models.jajko.params.eggH,NL:2.2,NU:1.9};   /* powłoka odniesienia wnętrza: domyślny kształt jajka (wspólna dla wszystkich wariantów obrysu) */
+const EGGD=Object.assign({},LINE.models.jajko.params,{eggZ:LINE.models.jajko.params.seam,eggNL:EGG_REF.NL,eggNU:EGG_REF.NU,explode:30,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0});
 const bun=(o)=>Object.assign({},RIBS,BUN,o);
 const M={
   krolik:{n:'Królik',desc:'Korpus z główką i smukłe liściaste uszy. Wymiary z linii: całość 150 mm.',tune:'earL',f:{real:1,ears:'rab'},g:['bun','rib','mount','earRab'],d:bun({earL:30.9,earW:14})},
@@ -821,11 +838,11 @@ const M={
   krasnal:{n:'Krasnal',desc:'Korpus i wymienna żebrowana czapka na głowę (dwa pliki).',tune:'hatTop',f:{real:1,hat:'krasnal'},g:['bun','rib','hatB','mountX'],d:bun({hatTop:150,hatRb:19.7,hatP:1.1,cuffH:8,pomR:5.8})},
   mikolaj:{n:'Mikołaj',desc:'Korpus i czapka z mankietem i pomponem (dwa pliki).',tune:'hatTop',f:{real:1,hat:'mikolaj'},g:['bun','rib','hatB','cuff','mountX'],d:bun({hatTop:150,hatRb:20.5,hatP:1.1,cuffH:8,pomR:5.8})},
   duszek:{n:'Duszek',desc:'Żebrowane prześcieradło z falbaną i twarzą z wgłębień.',f:{real:1,kind:'ghost'},g:['ghost','rib'],d:Object.assign({},RIBS,{height:105,hemR:27.5,headR:19,scal:7,scalD:9,ribs:46,face:1,pitD:2.8})},
-  jajko:{n:'Jajko',desc:'Miseczka i czapka na jajko niespodziankę 44 × 68 mm (dwa pliki).',f:{real:1,kind:'egg',cap:'plain'},g:['egg','rib','eggEars'],d:Object.assign({},EGGD)},
-  jajko_krasnal:{n:'Jajko z krasnalem',desc:'Miseczka i czapka jajka z przytopioną czapką krasnala.',f:{real:1,kind:'egg',cap:'krasnal'},g:['egg','rib','hatE'],d:Object.assign({},EGGD,{hatTop:128.5,hatZ:66,hatRb:24.2,hatP:1.35,cuffH:8,pomR:5.8})},
-  jajko_mikolaj:{n:'Jajko z Mikołajem',desc:'Miseczka i czapka jajka z czapką Mikołaja.',f:{real:1,kind:'egg',cap:'mikolaj'},g:['egg','rib','hatE','cuff'],d:Object.assign({},EGGD,{hatTop:118,hatZ:66,hatRb:24.2,hatP:1.35,cuffH:8,pomR:5.8})},
-  piskle:{n:'Pisklę',desc:'Czapka jajka z oczami, dziobem i pióropuszem.',f:{real:1,kind:'egg',cap:'chick'},g:['egg','rib','chick'],d:Object.assign({},EGGD,{beakL:4.8,eyeR:2.4,crestL:11})},
-  dynia:{n:'Dynia',desc:'Szeroka, spłaszczona bryła 100 × 100 mm z gniazdem i wymiennym ogonkiem. Profil i żebra (N = 92) z linii.',f:{real:1,kind:'line'},g:['lineBody','lineRib','lineParts'],files:['korpus','ogonek'],d:{scale:1,ribDepth:1.6,ribPow:.8,explode:0}},
+  jajko:{n:'Jajko',desc:'Miseczka i czapka na jajko niespodziankę 44 × 68 mm (dwa pliki).',f:{real:1,kind:'egg',cap:'plain'},g:['eggOut','egg','rib','eggEars'],d:Object.assign({},EGGD)},
+  jajko_krasnal:{n:'Jajko z krasnalem',desc:'Miseczka i czapka jajka z przytopioną czapką krasnala.',f:{real:1,kind:'egg',cap:'krasnal'},g:['eggOut','egg','rib','hatE'],d:Object.assign({},EGGD,{hatTop:128.5,hatZ:66,hatRb:24.2,hatP:1.35,cuffH:8,pomR:5.8})},
+  jajko_mikolaj:{n:'Jajko z Mikołajem',desc:'Miseczka i czapka jajka z czapką Mikołaja.',f:{real:1,kind:'egg',cap:'mikolaj'},g:['eggOut','egg','rib','hatE','cuff'],d:Object.assign({},EGGD,{hatTop:118,hatZ:66,hatRb:24.2,hatP:1.35,cuffH:8,pomR:5.8})},
+  piskle:{n:'Pisklę',desc:'Czapka jajka z oczami, dziobem i pióropuszem.',f:{real:1,kind:'egg',cap:'chick'},g:['eggOut','egg','rib','chick'],d:Object.assign({},EGGD,{beakL:4.8,eyeR:2.4,crestL:11})},
+  dynia:{n:'Dynia',desc:'Szeroka, spłaszczona bryła 100 × 65 mm (bez ogonka) z gniazdem i wymiennym ogonkiem. Szerokość i wysokość ustawiasz osobno, żebra zachowują rozstaw 3,4 mm.',f:{real:1,kind:'line'},g:['lineBodyWH','lineRib','lineParts'],files:['korpus','ogonek'],d:{width:lineW0('dynia'),height:LINE.models.dynia.H,ribDepth:1.6,ribPow:.8,explode:0}},
   balwan:{n:'Bałwan',desc:'Trzy żebrowane kule z kapeluszem w jednej bryle, gniazda na nos i miotłę. Profil, żebra (52 / 42 / 32 / 24) i porty z linii; w podglądzie jest nos, miotła tylko w skryptach.',f:{real:1,kind:'line'},g:['lineBody','lineRib','lineParts'],files:['korpus','nos'],d:{scale:1,ribDepth:1.6,ribPow:.8,explode:0}}
 };
 const ORDER=['krolik','kot','lis','mis','sowa','renifer','aniol','krasnal','mikolaj','duszek','jajko','jajko_krasnal','jajko_mikolaj','piskle','dynia','balwan'];
@@ -879,6 +896,9 @@ const $=s=>document.querySelector(s);
 const FMT={mm:v=>v.toFixed(v%1?1:0).replace('.',',')+' mm',pct:v=>Math.round(v*100)+'%',deg:v=>Math.round(v)+'°',num:v=>v.toFixed(2).replace('.',','),int:v=>String(Math.round(v))};
 const GR={
   lineBody:{t:'Bryła',items:[{k:'scale',l:'Skala bryły (żebra zachowują rozstaw)',min:.5,max:1.5,step:.01,f:'pct'}]},
+  lineBodyWH:{t:'Bryła',items:[
+    {k:'width',l:'Szerokość (po grzbietach żeber)',min:60,max:140,step:.5,f:'mm'},
+    {k:'height',l:'Wysokość bryły (bez ogonka)',min:40,max:100,step:.5,f:'mm'}]},
   lineRib:{t:'Żebra',items:[
     {k:'ribDepth',l:'Głębokość rowków (łącznie)',min:0,max:3.2,step:.1,f:'mm'},
     {k:'ribPow',l:'Ostrość żeber (mniej = ostrzejsze)',min:.3,max:1.6,step:.05,f:'num'}]},
@@ -964,14 +984,18 @@ const GR={
     {k:'scalD',l:'Głębokość wycięć falbany',min:0,max:16,step:.5,f:'mm'},
     {k:'face',l:'Twarz (wgłębienia)',type:'bool'},
     {k:'pitD',l:'Głębokość wgłębień twarzy',min:1,max:5,step:.1,f:'mm'}]},
-  egg:{t:'Jajko',items:[
-    {k:'eggW',l:'Szerokość',min:40,max:80,step:.5,f:'mm'},
-    {k:'eggH',l:'Wysokość całości',min:70,max:120,step:.5,f:'mm'},
+  eggOut:{t:'Kształt zewnętrzny (wnętrze się nie zmienia)',items:[
+    {k:'eggW',l:'Szerokość',min:55,max:80,step:.5,f:'mm'},
+    {k:'eggH',l:'Wysokość całości',min:80,max:120,step:.5,f:'mm'},
+    {k:'eggZ',l:'Wysokość najszerszego miejsca',min:22,max:56,step:.5,f:'mm'},
+    {k:'eggNL',l:'Pełność dołu (więcej = bardziej walcowaty)',min:1.6,max:3.6,step:.05,f:'num'},
+    {k:'eggNU',l:'Pełność góry (mniej = ostrzejszy czubek)',min:1.2,max:3.2,step:.05,f:'num'}]},
+  egg:{t:'Wnętrze i szew (to ustala dopasowanie)',items:[
     {k:'seam',l:'Wysokość szwu miseczka/czapka',min:26,max:46,step:.5,f:'mm'},
     {k:'cavR',l:'Promień wnęki',min:16,max:32,step:.5,f:'mm'},
     {k:'floor',l:'Grubość dna',min:2,max:12,step:.5,f:'mm'},
     {k:'lipH',l:'Wysokość kołnierza miseczki',min:4,max:12,step:.5,f:'mm'},
-    {k:'wallCup',l:'Grubość ścianki miseczki',min:2,max:6,step:.1,f:'mm'},
+    {k:'wallCup',l:'Minimalna ścianka miseczki',min:2,max:6,step:.1,f:'mm'},
     {k:'ceilZ',l:'Wysokość sufitu wnęki',min:60,max:110,step:.5,f:'mm'},
     {k:'explode',l:'Rozsunięcie czapki w podglądzie',min:0,max:80,step:1,f:'mm'}]},
   eggEars:{t:'Uszy na czapce',items:[
@@ -1172,7 +1196,7 @@ let noteT=0;
 function note(t){const n=$('#note');n.textContent=t;clearTimeout(noteT);noteT=setTimeout(()=>{n.textContent='';},6000);}
 
 $('#btnReset').addEventListener('click',()=>{params[cur]=defaults(cur);renderControls();rebuild(false);persist();note('Przywrócono ustawienia modelu.');});
-const FAM={bun:['bodyW','bodyHz','bodyN','headR','headZ','blend','ribs','earTilt','earX','earT'],egg:['eggW','eggH','seam','cavR','floor','lipH','wallCup','ceilZ','ribs']};
+const FAM={bun:['bodyW','bodyHz','bodyN','headR','headZ','blend','ribs','earTilt','earX','earT'],egg:['eggW','eggH','eggZ','eggNL','eggNU','seam','cavR','floor','lipH','wallCup','ceilZ','ribs']};
 const famOf=P=>'bodyW' in P?'bun':'eggW' in P?'egg':null;
 $('#btnAlign').addEventListener('click',()=>{
   const src=params[cur],fam=famOf(src);

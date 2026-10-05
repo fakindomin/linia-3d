@@ -24,14 +24,18 @@ function latheBands(G,o){
     }
   }
 }
+/* szerokość domyślna = średnica po grzbietach żeber (2 * promień profilu + głębokość rowków z linii) */
+function lineW0(id){let m=0;for(const p of LINE.models[id].R)if(p[1]>m)m=p[1];return 2*m+2*LINE.models[id].ribs.amp;}
+/* skala: albo jedna (P.scale, bałwan), albo osobno szerokość (sw, z P.width) i wysokość (sh, z P.height) (dynia); N żeber rośnie z szerokością, rozstaw zostaje */
 function lineSpec(id,P){
-  const L=LINE.models[id],s=P.scale,R0=lineTab(id),sc=a=>a&&a.map(x=>x*s);
-  let rmax=0;for(const p of L.R)if(p[1]>rmax)rmax=p[1];
+  const L=LINE.models[id],R0=lineTab(id);
+  let rmax0=0;for(const p of L.R)if(p[1]>rmax0)rmax0=p[1];
+  const sw=P.width!=null?(P.width-P.ribDepth)/(2*rmax0):P.scale,sh=P.height!=null?P.height/L.H:P.scale,sc=a=>a&&a.map(x=>x*sh);
   const ports={};
-  for(const k in L.ports){const f=L.ports[k].frame;ports[k]={O:f.O.map(x=>x*s),A:f.A,B:f.B,C:f.C};}
-  const S={L,s,H:L.H*s,rmax:rmax*s,R:z=>s*R0(z/s),ports,
-    bands:L.ribs.bands.map(b=>({N:Math.max(1,Math.round(b.N*s)),up:sc(b.up),down:sc(b.down)})),fade:L.ribs.fade,top:null};
-  if(L.top){const T=L.top,rs=T.R_SH*s;S.top=rho=>{const q=Math.min(rho/rs,1);return s*T.H_TOP-s*T.DIP*Math.pow(1-q*q,1.5);};}
+  for(const k in L.ports){const f=L.ports[k].frame;ports[k]={O:[f.O[0]*sw,f.O[1]*sw,f.O[2]*sh],A:f.A,B:f.B,C:f.C};}
+  const S={L,s:sw,sw,sh,H:L.H*sh,rmax:rmax0*sw,R:z=>sw*R0(z/sh),ports,
+    bands:L.ribs.bands.map(b=>({N:Math.max(1,Math.round(b.N*sw)),up:sc(b.up),down:sc(b.down)})),fade:L.ribs.fade,top:null};
+  if(L.top){const T=L.top,rs=T.R_SH*sw;S.top=rho=>{const q=Math.min(rho/rs,1);return sh*T.H_TOP-sh*T.DIP*Math.pow(1-q*q,1.5);};}
   /* przybliżona odległość do koperty korpusu (do przycinania dodatków): promień + ENV_PAD / normalna, a nad dnem zagłębienia wysokość */
   S.sdf=(x,y,z)=>{const R=S.R(z),dR=(S.R(z+0.3)-S.R(z-0.3))/0.6;let d=(R+LINE.const.ENV_PAD*0.6-Math.sqrt(x*x+y*y))/Math.sqrt(1+dR*dR);
     if(S.top)d=Math.min(d,S.top(Math.sqrt(x*x+y*y))+LINE.const.PAD_MIN-z);return d;};

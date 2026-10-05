@@ -106,6 +106,47 @@ for fr in (BS.FR_NOSE, BS.FR_BROOM):
     Fp = np.minimum(Fp, -S.socket_F(a, b, c))
 cmp_field("balwan (snow_F + gniazda nosa i miotly)", g, Fp, BS.TOTAL)
 
+# --- jajko: warianty obrysu przy tym samym wnetrzu
+print("jajko: warianty OBRYSU (wnetrze i szew stale):")
+EV = J["egg_var"]; zv = np.array(EV["zs"]); d0 = EV["domyslny"]
+cav0 = np.maximum(np.array(d0["cup"]), np.array(d0["cap"]))
+zc = np.linspace(BE.FLOOR, BE.FLOOR + BE.EGG_H, 400)                                   # jajko niespodzianka 44 x 68 w wnece (jak w build_egg.py)
+tt = np.clip(np.abs(zc - (BE.FLOOR + BE.EGG_H / 2)) / (BE.EGG_H / 2), 0, 1)
+re_ = (BE.EGG_D / 2) * np.clip(1 - tt ** 2.3, 0, None) ** (1 / 2.3)
+gap_py = float((np.maximum(BE.cav_cup_r(zc), BE.cav_cap_r(zc)) - re_).min())
+for name, v in EV.items():
+    if name == "zs": continue
+    cup, cap, R = np.array(v["cup"]), np.array(v["cap"]), np.array(v["R"])
+    check(f"  {name}: wneka miseczki i czapki identyczna z domyslna (max |d|)", float(max(np.abs(cup - np.array(d0["cup"])).max(), np.abs(cap - np.array(d0["cap"])).max())), 0.0)
+    mcup = (zv >= v["floor"]) & (zv <= v["ZS"]); mcap = (zv >= v["Z0"]) & (zv < v["ceil"])
+    check(f"  {name}: ujemny zapas scianki miseczki (min. grubosc >= {v['wallCup']})", float(max(0.0, v["wallCup"] - (R - cup)[mcup].min() - 1e-6)), 0.0)
+    check(f"  {name}: ujemny zapas scianki czapki (min. grubosc >= 2,0)", float(max(0.0, 2.0 - (R - cap)[mcap].min() - 1e-6)), 0.0)
+    dom = (R - np.array(v["Rshape"]) > 1e-6); dom = dom[1:] & dom[:-1]            # tylko odcinki, gdzie obrys dobudowuje wnetrze (bieguny jajka maja z natury strome zbocza)
+    sl = np.abs(np.diff(R)) / np.diff(zv)
+    check(f"  {name}: dobudowa obrysu bez uskokow i nawisow (max |dR/dz| <= 1,4)", float(sl[dom].max()) if dom.any() else 0.0, 1.4, "")
+    cav = np.maximum(cup, cap)
+    gap = float((cav[(zv >= BE.FLOOR) & (zv <= BE.FLOOR + BE.EGG_H)]).min())
+    ok_nan = v["nan"] == 0 and v["tris"] > 1000
+    ok &= ok_nan
+    print(f"  {'PASS' if ok_nan else 'FAIL'}  {name}: {v['tris']} tr., {v['w']:.1f} x {v['h']:.1f} mm, deficyt obrysu {v['deficit']:.2f} mm, ostrzezenia: {v['warn'] or 'brak'}")
+check("jajko: wariant domyslny bez ostrzezen", float(len(d0["warn"])), 0, "")
+check("jajko: wariant domyslny: deficyt obrysu", d0["deficit"], 0.02)
+check("jajko: wariant szeroki: szerokosc ~ eggW + rowek", abs(EV["szeroki"]["w"] - 66.8), 0.8)
+check("jajko: wariant szeroki: wysokosc ~ eggH", abs(EV["szeroki"]["h"] - 100.0), 1.2)
+check("jajko: wariant ostry: wysokosc ~ eggH", abs(EV["ostry"]["h"] - 110.0), 1.2)
+check("jajko: min. luz jajka niespodzianki do scian (wnetrze JS vs Python, wszystkie warianty identyczne)",
+      abs(float((cav0[(zv >= BE.FLOOR) & (zv <= BE.FLOOR + BE.EGG_H)]).min()) - float(np.maximum(BE.cav_cup_r(zv), BE.cav_cap_r(zv))[(zv >= BE.FLOOR) & (zv <= BE.FLOOR + BE.EGG_H)].min())), 1e-4)
+print(f"  (min. luz 44 x 68 mm do scian wnetrza, Python: {gap_py:.2f} mm)")
+
+# --- dynia: osobna szerokosc i wysokosc
+print("dynia: szerokosc i wysokosc osobno:")
+DV = J["dyn_var"]
+for name, v in DV.items():
+    wexp = v["P"].get("width", 100.0); hexp = v["P"].get("height", 65.0)
+    check(f"  {name}: szerokosc korpusu = {wexp}", abs(v["w"] - wexp), 1.0)
+    check(f"  {name}: wysokosc korpusu = {hexp}", abs(v["h"] - hexp), 1.0)
+    ok &= not v["warn"]
+
 # --- dym: wszystkie modele
 print("test dymny (szkic 1 mm):")
 for k, v in J["smoke"].items():

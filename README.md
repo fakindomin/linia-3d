@@ -35,4 +35,4 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `test_artifact.py`, `test_artifact.js` | zgodność podglądu z Pythonem (Node ładuje rdzeń JS) |
 | `legacy/` | stare skrypty lowpoly sprzed standardu (nieużywane) |
 
-Pliki STL nie leżą w repozytorium (ribbed ~ 11 MB każdy): są w **Releases** (`v1.0`) albo powstają z `build_all.sh`.
+Pliki STL nie leżą w repozytorium (ribbed ~ 11 MB każdy): powstają z `build_all.sh` (10-15 min). Gotowe paczki `linia-v1.0_*.zip` można dołączyć ręcznie do Release `v1.0`.

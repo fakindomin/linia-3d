@@ -5,7 +5,7 @@
 /* Układ: nagłówek z wyborem modelu, scena 3D po lewej, panel suwaków po prawej (na telefonie scena nad panelem). */
 :root{
   --bg:#e8e7e2; --panel:#f4f3ef; --ink:#232428; --muted:#6c6f75; --line:#d2d1ca;
-  --accent:#3d5473; --on-accent:#ffffff; --stage-a:#f3f2ee; --stage-b:#d9d7ce; --ground:#d3d1c8;
+  --accent:#3d5473; --on-accent:#ffffff; --stage-a:#f3f2ee; --stage-b:#d9d7ce; --ground:#d3d1c8; --model:#6b5c4a;
   --warn:#8a4f12; --warn-bg:#f1dfc8; --chip:#ecebe6;
   --f-display:'Bricolage Grotesque',system-ui,sans-serif;
   --f-body:'Figtree',system-ui,sans-serif;
@@ -14,13 +14,13 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#17181b; --panel:#212227; --ink:#e7e6e1; --muted:#9a9ca2; --line:#34363c;
-    --accent:#93abd0; --on-accent:#14161a; --stage-a:#2b2c31; --stage-b:#16171a; --ground:#202125;
+    --accent:#93abd0; --on-accent:#14161a; --stage-a:#2b2c31; --stage-b:#16171a; --ground:#202125; --model:#e6dccb;
     --warn:#e3b27a; --warn-bg:#3a2d1c; --chip:#2a2b30; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#17181b; --panel:#212227; --ink:#e7e6e1; --muted:#9a9ca2; --line:#34363c;
-  --accent:#93abd0; --on-accent:#14161a; --stage-a:#2b2c31; --stage-b:#16171a; --ground:#202125;
+  --accent:#93abd0; --on-accent:#14161a; --stage-a:#2b2c31; --stage-b:#16171a; --ground:#202125; --model:#e6dccb;
   --warn:#e3b27a; --warn-bg:#3a2d1c; --chip:#2a2b30; color-scheme:dark;
 }
 html,body{height:100%}
@@ -45,7 +45,9 @@ h1{font:600 22px/1.1 var(--f-display);margin:0;letter-spacing:-.01em}
 .nowebgl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 .panel{grid-area:panel;min-height:0;min-width:0;overflow-y:auto;background:var(--panel);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:18px}
 .mhead{display:flex;flex-direction:column;gap:4px}
-.mname{font:600 22px/1.1 var(--f-display);margin:0}
+.mtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mname{font:600 22px/1.1 var(--f-display);margin:0;min-width:0}
+.btn.small{padding:9px 12px;font-size:13px;flex:0 0 auto;white-space:nowrap}
 .mdesc{color:var(--muted);font-size:13.5px;margin:0}
 .group{display:flex;flex-direction:column;gap:10px;min-width:0}
 .group h2{margin:0;font:600 11px/1 var(--f-body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
@@ -97,7 +99,7 @@ h1{font:600 22px/1.1 var(--f-display);margin:0;letter-spacing:-.01em}
   </nav>
   <aside class="panel" id="panel">
     <section class="pane" id="pane-sliders" role="tabpanel" aria-labelledby="tab-sliders">
-      <div class="mhead"><h2 class="mname" id="mname"></h2><p class="mdesc" id="mdesc"></p></div>
+      <div class="mhead"><div class="mtop"><h2 class="mname" id="mname"></h2><button class="btn small" id="btnReset" type="button" title="Przywróć domyślne ustawienia tego modelu">↺ Resetuj</button></div><p class="mdesc" id="mdesc"></p></div>
       <div id="controls" style="display:flex;flex-direction:column;gap:18px"></div>
     </section>
     <section class="pane" id="pane-save" role="tabpanel" aria-labelledby="tab-save" hidden>
@@ -117,7 +119,6 @@ h1{font:600 22px/1.1 var(--f-display);margin:0;letter-spacing:-.01em}
         <p>Kopiuje wymiary korpusu i żebra z tego modelu do modeli tej samej rodziny (figurki albo jajka), a głębokość i ostrość żeber do wszystkich.</p>
         <button class="btn" id="btnFit" type="button">Całość na 150 mm</button>
         <p id="fitInfo"></p>
-        <button class="btn" id="btnReset" type="button">Przywróć ustawienia modelu</button>
       </div>
     </section>
     <p class="note" id="note" role="status" aria-live="polite"></p>
@@ -991,6 +992,8 @@ function requestRender(){if(rq||!ok)return;rq=requestAnimationFrame(()=>{rq=0;dr
 function draw(){
   const cs=getComputedStyle(document.documentElement).getPropertyValue('--ground').trim();
   if(cs)gMat.color.set(cs);
+  const cm=getComputedStyle(document.documentElement).getPropertyValue('--model').trim();
+  if(cm)mat.color.set(cm);
   const cp=Math.cos(cam.pitch);
   camera.position.set(cam.dist*cp*Math.sin(cam.yaw),cam.ty+cam.dist*Math.sin(cam.pitch),cam.dist*cp*Math.cos(cam.yaw));
   camera.lookAt(0,cam.ty,0);renderer.render(scene,camera);

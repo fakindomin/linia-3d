@@ -15,6 +15,8 @@ python3 build_std_lowpoly.py      # 19 plików lp_*.stl (kilka sekund)
 ./build_all.sh                    # wszystko od zera + verify_all.py (10-15 min)
 python3 verify_all.py             # 209 kontroli na gotowych plikach out/*.stl
 python3 export_line_json.py       # line.json: stałe, profile i porty dla artefaktu „Żebrowana kolekcja”
+python3 build_artifact.py         # składa stronę podglądu (artifact/zebrowana_kolekcja.page.html) z line.json
+python3 test_artifact.py          # podgląd (Node) kontra Python: profile, porty, pola 3D
 ```
 
 ## Układ repozytorium
@@ -29,6 +31,8 @@ python3 export_line_json.py       # line.json: stałe, profile i porty dla artef
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `new_model_template.py` | wzór nowego modelu (kopiuj i zmień sekcję „DANE MODELU”) |
 | `export_line_json.py` | stałe/profile/porty → `line.json` dla artefaktu (przeglądarkowy edytor) |
+| `build_artifact.py`, `artifact/` | składanie strony podglądu (`.src.html` + `line_core.js` + `line.json`); STL z przeglądarki to siatki robocze |
+| `test_artifact.py`, `test_artifact.js` | zgodność podglądu z Pythonem (Node ładuje rdzeń JS) |
 | `legacy/` | stare skrypty lowpoly sprzed standardu (nieużywane) |
 
 Pliki STL nie leżą w repozytorium (ribbed ~ 11 MB każdy): są w **Releases** (`v1.0`) albo powstają z `build_all.sh`.

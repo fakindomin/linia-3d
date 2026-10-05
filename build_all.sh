@@ -12,3 +12,6 @@ python3 ears_A.py                   # ucho_{mis,kot,lis,sowa}_{prawe,lewe}
 python3 build_std_ribbed_parts.py   # STANDARD v1.0: czesci zebrowane przyciete do koperty (nadpisuje wersje powyzej)
 python3 build_std_lowpoly.py        # wszystkie lp_*.stl
 python3 verify_all.py               # kontrola standardu (kod wyjscia 1 przy bledzie)
+python3 export_line_json.py         # line.json dla podgladu w przegladarce
+python3 build_artifact.py           # artifact/zebrowana_kolekcja.page.html
+python3 test_artifact.py            # podglad kontra Python (kod wyjscia 1 przy rozbieznosci)

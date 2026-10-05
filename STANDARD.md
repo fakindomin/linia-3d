@@ -108,7 +108,25 @@ Stan wersji 1.0: **209 PASS, 0 FAIL** (kontrola przed dostawą).
 * Lowpoly bałwan: M = 14/10/10/8 w czterech sekcjach (kula, kula, głowa, kapelusz); sekcje łączą pasy trójkątów 0,8 mm.
 * Stare skrypty lowpoly (przed standardem) przeniesione do `legacy/`; grupy A/B (czapki, bombki, wazony…) mają jeszcze stożek sufitu 55° — przebudowa: `build_egg.py` + skrypty grupy.
 
-## 9. Pliki
+## 9. Podgląd w przeglądarce (artefakt „Żebrowana kolekcja”)
+
+Zasada: **Python = jedyne źródło prawdy; pliki do druku powstają wyłącznie ze skryptów.** Artefakt to podgląd/edytor: jego stałe, profile, pasma żeber i porty
+pochodzą z `line.json`, generowanego z `standard.py`/`models.py`/`shapes.py`/`build_*.py`.
+
+```bash
+python3 export_line_json.py     # standard.py + modele → line.json (odcisk źródeł source_sha1, kontrole: profil < 0,01 mm, pasma bałwana = snow_F)
+python3 build_artifact.py       # artifact/zebrowana_kolekcja.src.html + line.json + line_core.js → .html (testy) i .page.html (do publikacji)
+python3 test_artifact.py        # JS (Node) kontra Python: profile, porty, pola 3D (królik, dynia, bałwan), dym 16 modeli; kod 1 przy rozbieżności
+# publikacja: Artifact publish artifact/zebrowana_kolekcja.page.html (ten sam url → ta sama strona)
+```
+
+Zmiana stałej/profilu: edytuj Python → `export_line_json.py` → `build_artifact.py` → `test_artifact.py` → publikacja. Test sprawdza też odcisk źródeł (kod = line.json = HTML).
+
+* Siatki STL z przeglądarki (zakładka Zapis) to **siatki robocze** (surface nets, nie gwarantują szczelności); do druku używać plików z `out/`.
+* Dynia w artefakcie: N = 92, zanik żeber (12, 28) — odchylenie jak w skrypcie `build_pumpkin.py` (profil grzbietu `Rp`, a≈50, vs profil pola S_FINE, a≈49,2).
+* Miotła bałwana jest tylko w Pythonie (nie ma jej w podglądzie).
+
+## 10. Pliki
 
 Żebra (19): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
 `jajko_czapka_uszy`, `jajko_czapka_uszy_dlugie`, `dynia_korpus`, `dynia_korpus_platy`, `dynia_ogonek`, `balwan`, `balwan_nos`, `balwan_miotla` — plus dodatkowe uszy `ucho_{mis,kot,lis,sowa}_{prawe,lewe}`.
@@ -116,3 +134,4 @@ Lowpoly (19): te same nazwy z prefiksem `lp_` (np. `lp_krolik_calosc.stl`, `lp_b
 
 Skrypty: `standard.py`, `models.py`, `lp.py`, `lp_parts.py`, `build_std_lowpoly.py` (wszystkie lp_*.stl), `build_std_ribbed_parts.py` (części żebrowane),
 `build_egg.py` + `build_dlugie.py` (czapki jajka), `build_figurki.py`/`build_pumpkin.py`/`build_snowman.py` (korpusy żebrowane), `verify_all.py`, `new_model_template.py`.
+Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.

@@ -176,6 +176,21 @@ def _tri_tri(A, B):
     return hit
 
 
+NOISE_RB = 0.01                          # szum voxeli siatek zebrowanych (Python, voxel 0,35 mm); eksport z podgladu (0,5 mm) ma wiekszy: test_artifact.py ustawia 0,02
+OVERHANG_ALLOW = {"duszek.stl": 0.015}   # dozwolony ulamek powierzchni z nawisem: falbana duszka (plytkie stoki w pierwszych ~2 mm nad stolem + sklepienia lukow <= 6 mm)
+
+
+def overhang(m, name):
+    """nawisy wg reguly STANDARDU (standard.overhang_check: > 55 st. od pionu, mostki <= 12 mm, szum voxeli 1% dla zeber); None, gdy standard niedostepny"""
+    try:
+        import standard as S
+    except Exception:
+        return None
+    nf = 0.0 if name.startswith("lp_") else NOISE_RB
+    nf = max(nf, OVERHANG_ALLOW.get(name, 0.0))
+    return S.overhang_check(m, (), noise_frac=nf)
+
+
 CAV_MIN = 2.0            # mm: punkt powierzchni uznajemy za sciane WNEKI, gdy promien wzdluz normalnej (do pustki) trafia w sciane dalej niz tyle
 
 
@@ -262,6 +277,12 @@ def check(path, expect_components=1, with_wall=True, with_selfint=True):
         else:
             r["wall_p1_mm"] = round(w["p1"], 2); r["wall_min_mm"] = round(w["min"], 2); r["wall_thin_frac"] = round(w["thin_frac"], 4)
             if w["thin_frac"] > THIN_FRAC_WARN: r["warn"].append(f"{100 * w['thin_frac']:.1f}% powierzchni to scianka wneki cienszą niz {MIN_WALL} mm (p1 {w['p1']:.2f}, min {w['min']:.2f})")
+    if with_wall:
+        ov = overhang(m, name)
+        if ov is not None:
+            r["overhang_mm2"] = ov["steep_mm2"]; r["overhang_pct"] = round(100 * ov["steep_mm2"] / float(m.area), 2)
+            if not ov["ok"]:
+                r["warn"].append(f"nawisy > 55 st. od pionu: {ov['steep_mm2']:.0f} mm2 ({r['overhang_pct']}% powierzchni), najszerszy mostek {max([b[1] for b in ov['bridges']] or [0]):.1f} mm -> mozliwe podpory")
     if with_selfint:
         si = self_intersections(m); r["self_intersections"] = si
         if si: r["fail"].append(f"{si} par trojkatow sie przecina")

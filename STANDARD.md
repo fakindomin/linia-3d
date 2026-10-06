@@ -112,6 +112,7 @@ Każdy plik do druku (Python z `out/` **i** eksport z podglądu) przechodzi tę 
 | 6 | brak samoprzecięć (pary trójkątów przecinających się wzajemnie; styk brzegowy < 0,2% trójkąta nie liczy się) | 0 |
 | 7 | płaska podstawa na stole (z = 0, pole styku ≥ 20 mm² dla części stojących) | ostrzeżenie |
 | 8 | ścianka wnęk (czapki, miseczki, doniczki, wazony): wiązka 7 promieni od strony wnęki, mediana; ≥ 0,8 mm (2 ścieżki dyszy 0,4) | ostrzeżenie, gdy > 0,5% powierzchni |
+| 9 | nawisy > 55° od pionu wg reguły standardu (`standard.overhang_check`: mostki ≤ 12 mm, szum voxeli 1% dla żeber, 0 dla lowpoly) — czyli druk bez podpór | ostrzeżenie |
 
 Dlaczego tak: żeberka mają z natury ostre grzbiety węższe niż 0,8 mm, więc cienkość mierzymy **od strony wnęk**, nie na grzbietach żeber (pojedynczy promień w poprzek żebra dawał fałszywe alarmy).
 
@@ -127,7 +128,8 @@ Jak pliki powstają szczelne:
 * Miotła bałwana: grzbiet unosi się nad powierzchnią 0,65–1,2 mm między podstawą a czopem (pasowanie na czopie, luz podstawy ≥ 0,4).
 * Nowe stałe N dla pięciu modeli kluczowych są zamrożone (nie wynikają ze wzoru na N), nowe modele liczą N ze wzoru.
 * Lowpoly bałwan: M = 14/10/10/8 w czterech sekcjach (kula, kula, głowa, kapelusz); sekcje łączą pasy trójkątów 0,8 mm.
-* Stare skrypty lowpoly (przed standardem) przeniesione do `legacy/`; grupy A/B (czapki, bombki, wazony…) mają jeszcze stożek sufitu 55° — przebudowa: `build_egg.py` + skrypty grupy.
+* Stare skrypty lowpoly (przed standardem) przeniesione do `legacy/`. Grupy A/B (czapki na głowę, czapki jajka, matrioszki) mają już sufit wnęki 52° (`LP_SLOPE`, przebudowane), wszystkie 97 plików przechodzi regułę nawisów w `verify_print.py`.
+* Duszek (falbana u dołu): 1,1 % powierzchni to płytkie stoki w pierwszych ~2 mm nad stołem i sklepienia łuków ≤ 6 mm; dozwolone 1,5 % (`OVERHANG_ALLOW` w `verify_print.py`), podpór nie trzeba.
 
 ## 9. Podgląd w przeglądarce (artefakt „Żebrowana kolekcja”)
 

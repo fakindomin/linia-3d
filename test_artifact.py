@@ -171,6 +171,7 @@ check("krolik: wysokosc calosci (150 mm)", abs(sm["krolik"]["h"] - 150.0), 1.0)
 if "--print" in sys.argv:
     import tempfile, glob
     import verify_print as VP
+    VP.NOISE_RB = 0.02                      # siatka robocza podgladu 0,5 mm (Python 0,35 mm): wiekszy szum voxeli na sufitach 52 st.
     tmp = tempfile.mkdtemp()
     t1 = time.time()
     subprocess.run(["node", os.path.join(HERE, "test_artifact.js"), html, "--stl", tmp, "all"], capture_output=True, check=True, text=True, timeout=1800)

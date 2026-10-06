@@ -8,7 +8,8 @@ import shapes as SH
 from shapely.geometry import Polygon
 from shapely import affinity
 
-CONE = 1.0 / math.tan(math.radians(35.0))      # |dr/dz| sufitu: 55 st. od pionu
+from standard import LP_SLOPE
+CONE = LP_SLOPE                                # |dr/dz| sufitu = 1,3 (52 st. od pionu) - STANDARD v1.0, jak w pozostalych czapkach
 R_TOP = 5.0
 VOX = 0.35
 
@@ -143,4 +144,4 @@ if __name__ == "__main__":
     S = make_S(sS)
     for nm, e, host in (("M", M, L), ("S", S, M)):
         print(f"{nm}: skala {e.s:.4f} | wys. {e.H:.1f} | srednica {2*(e.RMAX+0.8):.1f} | N zeber {e.N} | wneka R {e.R_CAV:.1f} | luz do gospodarza {gap(host, e):.2f} mm | "
-              f"sufit: min dr/dz {e.check_ceiling()[0]:.2f} (limit -1,43)")
+              f"sufit: min dr/dz {e.check_ceiling()[0]:.2f} (limit -1,30)")

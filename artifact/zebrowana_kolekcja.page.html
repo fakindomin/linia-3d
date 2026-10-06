@@ -647,7 +647,7 @@ function hatField(G,h,amp,pw,mode){latheField(G,{R:h.R,N:h.N,amp,pow:pw,w:h.w,mo
 
 /* ---- jajko ---- */
 function eggDef(P){
-  const SL=1.3;   /* największe nachylenie obrysu dobudowanego do wnętrza (dr/dz): jak sufity wnęk, bez nawisów ostrzejszych niż 52° */
+  const SL=LINE.const.LP_SLOPE;   /* największe nachylenie obrysu dobudowanego do wnętrza (dr/dz): jak sufity wnęk (STANDARD LP_SLOPE = 1,3), bez nawisów ostrzejszych niż 52° */
   const E={H:P.eggH,ZM:P.eggZ,Rcav:P.cavR,floor:P.floor,lipH:P.lipH,wallCup:P.wallCup,lipWall:1.2,clR:0.25,clZ:0.2,wcap:2.6,ceil:P.ceilZ,Rtop:LINE.models.jajko.cone.R_TOP,
     n:Math.round(P.ribs),amp:P.ribDepth/2,pw:P.ribPow};
   E.ZS=P.seam;E.Z0=E.ZS+E.clZ;E.Rlip=E.Rcav+E.lipWall;E.Rbore=E.Rlip+E.clR;E.ZL=E.ZS+E.lipH;
@@ -714,7 +714,7 @@ function buildReal(id,P,opt){
     for(const s of[1,-1])localField(G,wingFrame(P,s),(a,b,c)=>w.fp.F(a,b,c),w.a,w.b,[-1,P.wingT+1.7],'max');
   }
   if(F.hat){
-    const amp=B.amp,RCV=B.HR+amp+0.45,E35=35*D2R,zt=B.HC+RCV*Math.cos(E35),rt=RCV*Math.sin(E35);
+    const amp=B.amp,RCV=B.HR+amp+0.45,E35=Math.atan(1/LINE.const.LP_SLOPE),zt=B.HC+RCV*Math.cos(E35),rt=RCV*Math.sin(E35);
     const zb=B.HC+1.5,Rb=P.hatRb;
     const h=mkHat(F.hat,zb,P.hatTop,Rb,nRibs(Rb),0,P.hatP,P);
     const h2=Math.max(24,Rb+B.amp+3),G2=mkGrid(-h2,h2,-h2,h2,zb-1,P.hatTop+1,vox);

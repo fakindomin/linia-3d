@@ -8,6 +8,7 @@ from lib import *
 from parts import *
 from shapes import *
 import build_egg as EG
+from standard import LP_SLOPE
 
 T0 = time.time()
 VOX = 0.35
@@ -92,7 +93,7 @@ class Hat:
 
 # ---------- czapka wymienna na glowe korpusu ----------
 RCV = HEAD_R + RIB_AMP + 0.45          # wnetrze: kula wiekszej o szczyty zeber i luz 0,45 mm
-ELEV = math.radians(35.0)
+ELEV = math.atan(1.0 / LP_SLOPE)       # STANDARD v1.0: sufit wneki pod tym samym kątem co w pozostałych częściach (|dr/dz| = LP_SLOPE = 1,3; 52 st. od pionu)
 
 
 def cavity_F(X, Y, Z):
@@ -100,7 +101,7 @@ def cavity_F(X, Y, Z):
     z_t = HEAD_ZC + RCV * math.cos(ELEV)
     r_t = RCV * math.sin(ELEV)
     r_sph = np.sqrt(np.clip(RCV ** 2 - (Z - HEAD_ZC) ** 2, 0, None))
-    r_cone = r_t - (Z - z_t) / math.tan(ELEV)          # sufit: stozek 35 st. nad poziomem (55 st. od pionu)
+    r_cone = r_t - (Z - z_t) / math.tan(ELEV)          # sufit: stozek 37,6 st. nad poziomem (52 st. od pionu, jak STANDARD)
     rc = np.where(Z < z_t, r_sph, r_cone)
     rc = np.where(Z < z_t + math.tan(ELEV) * (r_t - 3.0), rc, -1.0)     # plaski sufit przy r = 3
     return (rc - rho).astype(np.float32)

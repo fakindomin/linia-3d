@@ -1,7 +1,9 @@
 """Zgodnosc podgladu w przegladarce (artifact/zebrowana_kolekcja.html) ze skryptami Pythona (STANDARD v1.0).
 Node ladowany jest rdzeniem podgladu (test_artifact.js); tu porownanie liczbowe: profile, porty, ramki, wneka jajka, POLA 3D (krolik, dynia,
 balwan na siatce 1 mm) oraz test dymny wszystkich 16 modeli. Zwraca kod 1, gdy cos sie rozjezdza.
-Uzycie:  python test_artifact.py [plik.html]
+Uzycie:  python test_artifact.py [plik.html] [--print]
+  --print: dodatkowo eksportuje wszystkie 16 modeli (24 pliki STL, siatka 0,5 mm) tak jak przycisk 'Zapisz' w podgladzie i puszcza je przez verify_print.py
+           (szczelnosc, zdegenerowane, samoprzeciecia, sciany wnek) - ta sama kontrola, co pliki z Pythona.
 """
 import sys, os, json, base64, subprocess, time
 import numpy as np
@@ -15,7 +17,8 @@ import build_snowman as BS
 import build_egg as BE
 import export_line_json as EX
 
-html = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "artifact", "zebrowana_kolekcja.html")
+_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+html = _args[0] if _args else os.path.join(HERE, "artifact", "zebrowana_kolekcja.html")
 t0 = time.time()
 raw = subprocess.run(["node", os.path.join(HERE, "test_artifact.js"), html], capture_output=True, check=True, text=True, timeout=900).stdout
 J = json.loads(raw)
@@ -164,6 +167,20 @@ sm = J["smoke"]
 check("balwan: wysokosc korpusu+nosa", abs(sm["balwan"]["h"] - 150.0), 0.6)
 check("dynia: szerokosc (100 mm + zebra)", abs(sm["dynia"]["w"] - 100.0), 1.0)
 check("krolik: wysokosc calosci (150 mm)", abs(sm["krolik"]["h"] - 150.0), 1.0)
+
+if "--print" in sys.argv:
+    import tempfile, glob
+    import verify_print as VP
+    tmp = tempfile.mkdtemp()
+    t1 = time.time()
+    subprocess.run(["node", os.path.join(HERE, "test_artifact.js"), html, "--stl", tmp, "all"], capture_output=True, check=True, text=True, timeout=1800)
+    files = sorted(glob.glob(os.path.join(tmp, "*.stl")))
+    print(f"eksport STL z podgladu: {len(files)} plikow, {time.time() - t1:.0f} s; kontrola druku (verify_print):")
+    for f in files:
+        r = VP.check(f)
+        ok &= r["ok"]
+        print(f"  {'PASS' if r['ok'] else 'FAIL'}  {r['file']:30s} {r['tris']:>7d} tr.  skl {r['components']}  brz/nm {r['boundary_edges']}/{r['nonmanifold_edges']}  scisk. {r.get('pinched_vertices', '-')}  "
+              f"przeciecia {r.get('self_intersections', '-')}  scianka {r.get('wall_p1_mm')}" + "".join("  !! " + x for x in r["fail"]) + "".join("  ~ " + x for x in r["warn"]))
 
 print("\nWYNIK:", "OK" if ok else "BLAD", f"({time.time() - t0:.0f} s)")
 sys.exit(0 if ok else 1)

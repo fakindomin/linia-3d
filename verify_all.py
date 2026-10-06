@@ -222,6 +222,10 @@ for nm, solid, model in (("krolik", SOL["bunny"], BUNNY), ("balwan", SOL["snow"]
     r = solid.volume / Vid(model)
     check(f"objetosc lowpoly/idealna {nm}: {r:.3f} (0,95..1,03)", 0.95 <= r <= 1.03)
 
+# ------------------------------------------------------------------ kontrola druku: tester testera (pelna kontrola plikow: python verify_print.py)
+import verify_print as _VP
+check("verify_print: samokontrola (dobra siatka PASS; dziura, odwrocona sciana, zdegenerowany, przeciecie, 2 skladowe FAIL)", _VP.selftest())
+
 # ------------------------------------------------------------------ podsumowanie
 print(f"\nWYNIK: {len(OK)} PASS, {len(BAD)} FAIL")
 if BAD:

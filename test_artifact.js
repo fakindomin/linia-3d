@@ -8,7 +8,7 @@ const a = html.indexOf('/*CORE_START*/'), b = html.indexOf('/*CORE_END*/');
 if (a < 0 || b < 0) throw new Error('brak znacznikow CORE');
 const ctx = {Math, console, Float32Array, Float64Array, Int32Array, Uint32Array, Uint8Array, ArrayBuffer, DataView, Map, Set, Object, Array, JSON, Number, String, Promise, setTimeout, Buffer};
 vm.createContext(ctx);
-vm.runInContext(html.slice(a, b) + `;this.X={M,ORDER,defaults,bunDef,eggDef,buildModel,finalize,mountFrame,mkGrid,fillBun,lineGrid,fileNames,triCount,LINE,D2R,exportGroups,stlBytes};`, ctx);
+vm.runInContext(html.slice(a, b) + `;this.X={M,ORDER,defaults,bunDef,eggDef,buildModel,finalize,mountFrame,mkGrid,fillBun,lineGrid,fileNames,triCount,LINE,D2R,exportGroups,stlBytes,meshCheck,manifoldGrid,surfaceNets};`, ctx);
 const X = ctx.X;
 const out = {};
 const b64 = F => Buffer.from(F.buffer, F.byteOffset, F.byteLength).toString('base64');
@@ -80,7 +80,8 @@ for (const id of X.ORDER) {
 if (stlDir) {
   fs.mkdirSync(stlDir, {recursive: true});
   out.stl = [];
-  for (const id of ['krolik', 'jajko', 'dynia', 'balwan']) {
+  const ids = process.argv[5] === 'all' ? X.ORDER : ['krolik', 'jajko', 'dynia', 'balwan'];
+  for (const id of ids) {
     const gs = X.exportGroups(X.buildModel(id, X.defaults(id), {vox: 0.5}));
     for (const g of gs) { const f = (gs.length > 1 ? id + '_' + g.g : id) + '.stl'; fs.writeFileSync(path.join(stlDir, f), X.stlBytes(g.parts)); out.stl.push(f); }
   }

@@ -12,8 +12,9 @@ ogonek, nos, miotła) na czopach 5×5×8 pasują do obu stylów.
 pip install -r requirements.txt
 python3 new_model_template.py     # demo „gruszka” w obu stylach + kontrola (31 PASS), pliki w out_demo/
 python3 build_std_lowpoly.py      # 19 plików lp_*.stl (kilka sekund)
-./build_all.sh                    # wszystko od zera + verify_all.py (10-15 min)
-python3 verify_all.py             # 209 kontroli na gotowych plikach out/*.stl
+./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
+python3 verify_all.py             # 210 kontroli standardu na gotowych plikach out/*.stl
+python3 verify_print.py out/      # szczelność i poprawność druku każdego STL (dziury, zdegenerowane, samoprzecięcia, ścianki; ok. 2 min)
 python3 export_line_json.py       # line.json: stałe, profile i porty dla artefaktu „Żebrowana kolekcja”
 python3 build_artifact.py         # składa stronę podglądu (artifact/zebrowana_kolekcja.page.html) z line.json
 python3 test_artifact.py          # podgląd (Node) kontra Python: profile, porty, pola 3D
@@ -29,6 +30,8 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `lp.py`, `lp_parts.py` | rdzeń lowpoly (pierścienie, boolean przez manifold3d, liść, poroże) |
 | `build_*.py`, `ears_A.py` | skrypty budujące STL (kolejność w `build_all.sh`) |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
+| `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |
+| `meshclean.py`, `clean_stl.py` | usuwanie mikro-trójkątów bez otwierania siatki (wpięte w `lib.save`); `clean_stl.py` czyści istniejące pliki |
 | `new_model_template.py` | wzór nowego modelu (kopiuj i zmień sekcję „DANE MODELU”) |
 | `export_line_json.py` | stałe/profile/porty → `line.json` dla artefaktu (przeglądarkowy edytor) |
 | `build_artifact.py`, `artifact/` | składanie strony podglądu (`.src.html` + `line_core.js` + `line.json`); STL z przeglądarki to siatki robocze |

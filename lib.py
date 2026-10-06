@@ -244,10 +244,14 @@ def save(m, name, upright=True, note="", shift_to_bed=True):
         m = m.copy()
         m.apply_translation([0, 0, -m.bounds[0][2]])
     path = os.path.join(OUT, name)
+    # STANDARD: przed zapisem zaokraglamy do float32 i zwijamy mikro-trojkaty (pole < 1e-8 mm2) bez otwierania siatki (meshclean.py)
+    from meshclean import clean_degenerate
+    m, ci = clean_degenerate(m)
+    if ci["before"]:
+        print(f"  ({name}: zdegenerowane trojkaty {ci['before']} -> {ci['after']}, dV = {ci['dvol']:+.2e} mm3)")
     m.export(path)
-    # kontrola po zapisie: wczytaj plik (float32, scalanie wierzcholkow) i usun ewentualne resztki / zdegenerowane trojkaty
+    # kontrola po zapisie: wczytaj plik (float32, scalanie wierzcholkow) i usun ewentualne resztki
     r = trimesh.load(path, process=True)
-    r.update_faces(r.nondegenerate_faces())
     r.remove_unreferenced_vertices()
     parts_ = r.split(only_watertight=False)
     if len(parts_) > 1 or not r.is_watertight or len(r.faces) != len(m.faces):

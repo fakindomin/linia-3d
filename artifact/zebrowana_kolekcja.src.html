@@ -111,6 +111,7 @@ h1{font:600 22px/1.1 var(--f-display);margin:0;letter-spacing:-.01em}
         <button class="btn" id="btnAll" type="button">Pobierz wszystkie modele</button>
       </div>
       <p id="allInfo"></p>
+      <p id="meshInfo"></p>
     </section>
     <section class="pane" id="pane-line" role="tabpanel" aria-labelledby="tab-line" hidden>
       <div class="mhead"><h2 class="mname">Linia</h2><p class="mdesc">Narzędzia, które pilnują, żeby wszystkie modele były jedną serią.</p></div>
@@ -239,9 +240,77 @@ function localField(G,fr,fn,ar,br,cr,mode){
       const val=fn(a,b,c);
       if(cut){const t=-val;if(t<F[o+i])F[o+i]=t;}else if(val>F[o+i])F[o+i]=val;}}}
 }
-/* naive surface nets: siatka szczelna, wierzchołek w średniej przecięć krawędzi */
-function surfaceNets(G){
-  const{nx,ny,nz,v,F}=G,sz=nx*ny,cx=nx-1,cy=ny-1,cz=nz-1;
+/* ===== SIATKA ROZMAITA (do druku): naiwne surface nets daja nieregularne krawedzie (>2 trojkaty) i scisniecia w komorkach, w ktorych
+   wnetrze albo zewnetrze nie jest spojne (szachownica na scianie, dwa przeciwlegle naroza). Przed siatkowaniem poprawiamy znak jednego wezla
+   (o najmniejszym |F|, czyli ruch powierzchni o ulamek voxela) tak, by zadna komorka nie miala takiej konfiguracji. Potem kazda krawedz ma 2 trojkaty. ===== */
+const MN_BAD=new Uint8Array(256);
+(function(){
+  const adj=[[1,2,4],[0,3,5],[0,3,6],[1,2,7],[0,5,6],[1,4,7],[2,4,7],[3,5,6]],faces=[[0,1,3,2],[4,5,7,6],[0,1,5,4],[2,3,7,6],[0,2,6,4],[1,3,7,5]];
+  const comps=(m,val)=>{const seen=[0,0,0,0,0,0,0,0];let n=0;
+    for(let s=0;s<8;s++){if(((m>>s)&1)!==val||seen[s])continue;n++;const st=[s];seen[s]=1;
+      while(st.length){const u=st.pop();for(const w of adj[u])if(!seen[w]&&((m>>w)&1)===val){seen[w]=1;st.push(w);}}}
+    return n;};
+  for(let m=1;m<255;m++){
+    let bad=comps(m,1)>1||comps(m,0)>1;
+    if(!bad)for(const f of faces){const a=(m>>f[0])&1,b=(m>>f[1])&1,c=(m>>f[2])&1,d=(m>>f[3])&1;if(a===c&&b===d&&a!==b){bad=true;break;}}
+    MN_BAD[m]=bad?1:0;
+  }
+})();
+function manifoldGrid(G){
+  const{nx,ny,nz,v}=G,F=G.F.slice(),sz=nx*ny,cx=nx-1,cy=ny-1,cz=nz-1,co=[0,1,nx,nx+1,sz,sz+1,sz+nx,sz+nx+1],eps=v*0.02;
+  const OX=[0,1,0,1,0,1,0,1],OY=[0,0,1,1,0,0,1,1],OZ=[0,0,0,0,1,1,1,1];
+  const maskAt=(b,skip,flip)=>{let m=0;for(let c=0;c<8;c++){const q=b+co[c];let on=F[q]>0;if(q===skip)on=!on;if(on)m|=1<<c;}return m;};
+  /* ile komorek wokol wezla q=(i,j,k) bedzie zlych, gdy zmienimy jego znak */
+  const badAround=(i,j,k)=>{let n=0;const q=i+nx*j+sz*k;
+    for(let dk=-1;dk<=0;dk++)for(let dj=-1;dj<=0;dj++)for(let di=-1;di<=0;di++){
+      const ci=i+di,cj=j+dj,ck=k+dk;if(ci<0||cj<0||ck<0||ci>=cx||cj>=cy||ck>=cz)continue;
+      const m=maskAt(ci+nx*cj+sz*ck,q);if(m!==0&&m!==255&&MN_BAD[m])n++;}
+    return n;};
+  let total=0,left=0;
+  for(let pass=0;pass<80;pass++){
+    let flips=0;left=0;
+    for(let k=0;k<cz;k++)for(let j=0;j<cy;j++){let b=nx*j+sz*k;
+      for(let i=0;i<cx;i++,b++){
+        let m=0;for(let c=0;c<8;c++)if(F[b+co[c]]>0)m|=1<<c;
+        if(m===0||m===255||!MN_BAD[m])continue;
+        let best=-1,bn=1e9,bf=1e30;
+        for(let c=0;c<8;c++){const n=badAround(i+OX[c],j+OY[c],k+OZ[c]),a=Math.abs(F[b+co[c]]);
+          if(n<bn||(n===bn&&a<bf)){best=c;bn=n;bf=a;}}
+        const q=b+co[best];F[q]=F[q]>0?-eps:eps;flips++;
+      }}
+    total+=flips;if(!flips)break;
+  }
+  return{G:Object.assign({},G,{F}),flips:total};
+}
+/* male izolowane skladowe (pylki z szumu pola): usuwamy, zostaje glowna bryla */
+function dropSpecks(m){
+  const n=m.p.length/3,ix=m.i,par=new Int32Array(n);for(let i=0;i<n;i++)par[i]=i;
+  const find=x=>{while(par[x]!==x){par[x]=par[par[x]];x=par[x];}return x;};
+  for(let k=0;k<ix.length;k+=3){for(let e=1;e<3;e++){const a=find(ix[k]),b=find(ix[k+e]);if(a!==b)par[b]=a;}}
+  const cnt=new Map();for(let k=0;k<ix.length;k+=3){const r=find(ix[k]);cnt.set(r,(cnt.get(r)||0)+1);}
+  if(cnt.size<2)return m;
+  let big=0;for(const c of cnt.values())if(c>big)big=c;
+  const thr=Math.max(80,big*0.001),map=new Int32Array(n).fill(-1),p=[],idx=[];
+  for(let k=0;k<ix.length;k+=3){if(cnt.get(find(ix[k]))<thr)continue;
+    for(let e=0;e<3;e++){const u=ix[k+e];if(map[u]<0){map[u]=p.length/3;p.push(m.p[u*3],m.p[u*3+1],m.p[u*3+2]);}idx.push(map[u]);}}
+  return{p:new Float32Array(p),i:new Uint32Array(idx)};
+}
+/* kontrola siatki: krawedzie brzegowe (dziury), nieregularne (>2 trojkaty), skladowe, objetosc; do raportu przy zapisie */
+function meshCheck(m){
+  const ix=m.i,nt=ix.length/3,nv=m.p.length/3,keys=new Float64Array(nt*3);
+  for(let k=0;k<nt;k++)for(let e=0;e<3;e++){const a=ix[k*3+e],b=ix[k*3+(e+1)%3];keys[k*3+e]=a<b?a*nv+b:b*nv+a;}
+  keys.sort();
+  let boundary=0,nonman=0;
+  for(let i=0;i<keys.length;){let j=i+1;while(j<keys.length&&keys[j]===keys[i])j++;const c=j-i;if(c===1)boundary++;else if(c>2)nonman++;i=j;}
+  const par=new Int32Array(nv);for(let i=0;i<nv;i++)par[i]=i;
+  const find=x=>{while(par[x]!==x){par[x]=par[par[x]];x=par[x];}return x;};
+  for(let k=0;k<ix.length;k+=3)for(let e=1;e<3;e++){const a=find(ix[k]),b=find(ix[k+e]);if(a!==b)par[b]=a;}
+  const roots=new Set();for(let k=0;k<ix.length;k++)roots.add(find(ix[k]));
+  return{tris:nt,boundary,nonman,comps:roots.size,vol:volume(m),ok:boundary===0&&nonman===0&&roots.size===1&&volume(m)>0};
+}
+/* naive surface nets: wierzchołek w średniej przecięć krawędzi; pole wczesniej poprawione do siatki rozmaitej */
+function surfaceNets(G0){
+  const G=manifoldGrid(G0).G,{nx,ny,nz,v,F}=G,sz=nx*ny,cx=nx-1,cy=ny-1,cz=nz-1;
   const vid=new Int32Array(cx*cy*cz).fill(-1),pos=[];
   const co=[0,1,nx,nx+1,sz,sz+1,sz+nx,sz+nx+1],ox=[0,1,0,1,0,1,0,1],oy=[0,0,1,1,0,0,1,1],oz=[0,0,0,0,1,1,1,1];
   const ED=[0,1,2,3,4,5,6,7,0,2,1,3,4,6,5,7,0,4,1,5,2,6,3,7];
@@ -266,7 +335,7 @@ function surfaceNets(G){
     if(j<ny-1&&((F[b+nx]>0)!==in0))quad(cid(i-1,j,k-1),cid(i-1,j,k),cid(i,j,k),cid(i,j,k-1),!in0);
     if(k<nz-1&&((F[b+sz]>0)!==in0))quad(cid(i-1,j-1,k),cid(i,j-1,k),cid(i,j,k),cid(i-1,j,k),!in0);
   }
-  return{p:new Float32Array(pos),i:new Uint32Array(idx)};
+  return dropSpecks({p:new Float32Array(pos),i:new Uint32Array(idx)});
 }
 /* układ siatki (x,y,z; z do góry) -> układ strony (y do góry, przód +z) */
 function toPage(m){const p=m.p;for(let k=0;k<p.length;k+=3){const y=p[k+1],z=p[k+2];p[k+1]=z;p[k+2]=-y;}return orient(m);}
@@ -1198,9 +1267,16 @@ function renderQual(){
   $('#qualInfo').textContent='Jakość siatki: '+QUAL[qual].l+' ('+QUAL[qual].mb+'). Powierzchnia jak w skryptach, rozdzielczość '+QUAL[qual].v.toString().replace('.',',')+' mm.';
 }
 const tick=()=>new Promise(r=>setTimeout(r,20));
+const meshLog=[];
 function addModel(zip,id){
   const gs=exportGroups(buildModel(id,params[id],{vox:QUAL[qual].v}));
-  gs.forEach(x=>zip.file(gs.length>1?id+'_'+x.g+'.stl':id+'.stl',stlBytes(x.parts)));
+  gs.forEach(x=>{const fn=gs.length>1?id+'_'+x.g+'.stl':id+'.stl';zip.file(fn,stlBytes(x.parts));
+    x.parts.forEach(q=>{const c=meshCheck(q.m);meshLog.push({f:fn,part:q.name,c});});});
+}
+function showMeshLog(){
+  const bad=meshLog.filter(r=>!r.c.ok),el=$('#meshInfo');
+  el.textContent=bad.length?'Uwaga: '+bad.length+' z '+meshLog.length+' siatek nie jest szczelna: '+bad.map(r=>r.f+' ('+r.c.boundary+' otwartych, '+r.c.nonman+' nieregularnych krawędzi, '+r.c.comps+' składowych)').join('; ')+'.':'Kontrola siatek: wszystkie '+meshLog.length+' części są szczelne (każda krawędź ma 2 trójkąty, jedna bryła, objętość dodatnia).';
+  return bad.length;
 }
 let busy=false;
 async function runExport(ids,filename){
@@ -1209,9 +1285,12 @@ async function runExport(ids,filename){
   busy=true;$('#btnOne').disabled=true;$('#btnAll').disabled=true;
   try{
     const zip=new JSZip();
+    meshLog.length=0;
     for(let i=0;i<ids.length;i++){note('Buduję siatkę '+(i+1)+' z '+ids.length+': '+M[ids[i]].n+'…');await tick();addModel(zip,ids[i]);}
     note('Pakuję pliki…');await tick();
+    const nbad=showMeshLog();
     await saveZip(zip,filename);
+    if(nbad)note('Zapisano, ale '+nbad+' siatek nie przeszło kontroli szczelności: szczegóły w zakładce Zapis.');
   }catch(e){note('Nie udało się zbudować plików.');}
   busy=false;$('#btnOne').disabled=!dl;$('#btnAll').disabled=!dl;
 }

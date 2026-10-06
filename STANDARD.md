@@ -96,7 +96,28 @@ Fasetowe odchylenie od profilu idealnego: objętość lowpoly / idealna 0,98–1
 siatki (szczelność, 1 składowa, nawis), korpus w kopercie (±0,1 mm), odległość P0–powierzchnia, **macierz pasowania** część × korpus (rb i lp, każdy z każdym: interferencja ≤ 1 mm³, luz ≥ 0,15 mm),
 wysokości i wymiary rb vs lp, widmo żeber (FFT: N, rozstaw, amplituda), reguły M i pierścieni lowpoly. Wynik: `out/_verify_report.json`, kod wyjścia 1 przy błędzie.
 
-Stan wersji 1.0: **209 PASS, 0 FAIL** (kontrola przed dostawą).
+Stan: **210 PASS, 0 FAIL** (`verify_all.py`, z samokontrolą testera druku) oraz **97 z 97 plików PASS** w `verify_print.py out/` i 24 z 24 w eksporcie z podglądu.
+
+### 7a. Kontrola druku — szczelność i poprawność każdego STL (`verify_print.py`)
+
+Każdy plik do druku (Python z `out/` **i** eksport z podglądu) przechodzi tę samą kontrolę; `FAIL` = nie drukować. `python3 verify_print.py out/` (ok. 2 min, 2 procesy), `python3 verify_print.py --selftest` (tester testera: znane dobre i złe siatki), `python3 test_artifact.py --print` (16 modeli z podglądu → STL → ta sama kontrola).
+
+| # | Sprawdzenie | Próg |
+|---|---|---|
+| 1 | szczelność: każda krawędź w dokładnie 2 trójkątach (brak dziur, brak krawędzi nieregularnych) | 0 / 0 |
+| 2 | spójna orientacja trójkątów, objętość > 0 (normalne na zewnątrz) | 0 niespójnych |
+| 3 | brak trójkątów zdegenerowanych (pole < 1e-8 mm²), powtórzonych, NaN/Inf | 0 |
+| 4 | liczba składowych = oczekiwana (domyślnie 1: bez pyłków i wysp), parzysta liczba Eulera | 1 |
+| 5 | brak wierzchołków „ściśniętych” (dwie powierzchnie stykające się w punkcie — niejednoznaczne dla slicera) | 0 |
+| 6 | brak samoprzecięć (pary trójkątów przecinających się wzajemnie; styk brzegowy < 0,2% trójkąta nie liczy się) | 0 |
+| 7 | płaska podstawa na stole (z = 0, pole styku ≥ 20 mm² dla części stojących) | ostrzeżenie |
+| 8 | ścianka wnęk (czapki, miseczki, doniczki, wazony): wiązka 7 promieni od strony wnęki, mediana; ≥ 0,8 mm (2 ścieżki dyszy 0,4) | ostrzeżenie, gdy > 0,5% powierzchni |
+
+Dlaczego tak: żeberka mają z natury ostre grzbiety węższe niż 0,8 mm, więc cienkość mierzymy **od strony wnęk**, nie na grzbietach żeber (pojedynczy promień w poprzek żebra dawał fałszywe alarmy).
+
+Jak pliki powstają szczelne:
+* `lib.save` (a przez nią `standard.emit`/`save_lp`) przed zapisem zaokrągla wierzchołki do float32 (to, co zapisze STL) i **zwija mikro-trójkąty** (`meshclean.clean_degenerate`: zwinięcie najkrótszej krawędzi z warunkiem „link condition”, a dla igieł — przekłucie najdłuższej krawędzi; bez zmiany topologii, zmiana objętości < 1e-4 mm³). Istniejące pliki: `python3 clean_stl.py` (czyści w miejscu i sprawdza szczelność).
+* Podgląd (surface nets) ma **siatkę rozmaitościową**: tablica `MN_BAD` wykrywa komórki z szachownicą ścian lub rozłączonym wnętrzem/zewnętrzem i odwraca znak jednego narożnika (`manifoldGrid`), a `dropSpecks` usuwa pyłki (< 0,1% trójkątów największej składowej). Zakładka Zapis pokazuje raport `meshCheck` dla każdej części (brzegowe/nieregularne krawędzie, składowe, objętość).
 
 ## 8. Znane odchylenia (jawnie)
 
@@ -122,7 +143,7 @@ python3 test_artifact.py        # JS (Node) kontra Python: profile, porty, pola 
 
 Zmiana stałej/profilu: edytuj Python → `export_line_json.py` → `build_artifact.py` → `test_artifact.py` → publikacja. Test sprawdza też odcisk źródeł (kod = line.json = HTML).
 
-* Siatki STL z przeglądarki (zakładka Zapis) to **siatki robocze** (surface nets, nie gwarantują szczelności); do druku używać plików z `out/`.
+* Siatki STL z przeglądarki (zakładka Zapis) są szczelne (rozmaitościowe surface nets, raport `meshCheck` w zakładce Zapis, `test_artifact.py --print` puszcza je przez `verify_print.py`), ale mają rozdzielczość 0,35–0,5 mm i inne rozdzielczości siatki niż Python; **do druku seryjnego używać plików z `out/`** (Python = źródło prawdy, wynik pojedynczego wariantu z podglądu jest tylko podglądem).
 * Dynia w artefakcie: N = 92, zanik żeber (12, 28) — odchylenie jak w skrypcie `build_pumpkin.py` (profil grzbietu `Rp`, a≈50, vs profil pola S_FINE, a≈49,2).
 * Miotła bałwana jest tylko w Pythonie (nie ma jej w podglądzie).
 * Dynia w podglądzie ma osobną szerokość (po grzbietach żeber) i wysokość bryły; profil jest skalowany osobno w poziomie i w pionie, N żeber rośnie z szerokością (rozstaw 3,4 mm zostaje), port ogonka jedzie z górą bryły. Domyślnie (100 × 65 mm) = skrypt Pythona; inne rozmiary istnieją tylko w podglądzie (siatka robocza).
@@ -134,6 +155,6 @@ Zmiana stałej/profilu: edytuj Python → `export_line_json.py` → `build_artif
 `jajko_czapka_uszy`, `jajko_czapka_uszy_dlugie`, `dynia_korpus`, `dynia_korpus_platy`, `dynia_ogonek`, `balwan`, `balwan_nos`, `balwan_miotla` — plus dodatkowe uszy `ucho_{mis,kot,lis,sowa}_{prawe,lewe}`.
 Lowpoly (19): te same nazwy z prefiksem `lp_` (np. `lp_krolik_calosc.stl`, `lp_balwan.stl`).
 
-Skrypty: `standard.py`, `models.py`, `lp.py`, `lp_parts.py`, `build_std_lowpoly.py` (wszystkie lp_*.stl), `build_std_ribbed_parts.py` (części żebrowane),
+Skrypty: `standard.py`, `models.py`, `lp.py`, `lp_parts.py`, `meshclean.py` + `clean_stl.py` (czyszczenie mikro-trójkątów), `verify_print.py` (kontrola druku), `build_std_lowpoly.py` (wszystkie lp_*.stl), `build_std_ribbed_parts.py` (części żebrowane),
 `build_egg.py` + `build_dlugie.py` (czapki jajka), `build_figurki.py`/`build_pumpkin.py`/`build_snowman.py` (korpusy żebrowane), `verify_all.py`, `new_model_template.py`.
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.

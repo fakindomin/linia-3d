@@ -13,7 +13,8 @@ Y0 = 0.25                      # srodek grubosci ucha lezy w y=0 (os czopu w y=+
 
 # parametry korpusu (u krolika i renifera 'bazowego' = stale powyzej; nowe pola maja wartosci neutralne, wiec dawne ksztalty sie nie zmieniaja)
 BODY_DEFAULTS = dict(bodyW=2 * BODY_R, bodyHz=BODY_HZ, bodyN=BODY_N, bodyNu=BODY_N, bellyDz=0.0, headR=HEAD_R, headZ=HEAD_ZC, headK=1.0,
-                     neckR=0.0, blend=SMOOTH_P, ribs=N_BUNNY)
+                     neckR=0.0, blend=SMOOTH_P, ribs=N_BUNNY,
+                     sil=0, baseR=0.0, bellyZ=0.0, shZ=0.0, shR=0.0, neckZ=0.0)   # sil = 1: sylwetka z krzywej przez punkty (ponizej), dawne bodyHz/bellyDz/bodyN/bodyNu nieuzywane
 
 
 def body_params(**kw):
@@ -25,24 +26,70 @@ def body_params(**kw):
     return d
 
 
+SIL_EPS = 1.0   # minimalny odstep wysokosci miedzy kolejnymi punktami sylwetki [mm]
+
+
+def sil_nodes(p):
+    """punkty sylwetki (z, r) od dolu: podstawa (z = 0), najszersze miejsce brzucha, barki, najwezsze miejsce szyi, gora szyi (do srodka glowy);
+    wysokosci sa wymuszane rosnaco (odstep >= SIL_EPS), a promien szyi nie przekracza 0,95 promienia glowy"""
+    nr = min(p["neckR"], 0.95 * p["headR"])
+    zb = max(p["bellyZ"], SIL_EPS)
+    zs = max(p["shZ"], zb + SIL_EPS)
+    zn = max(p["neckZ"], zs + SIL_EPS)
+    zt = max(p["headZ"], zn + SIL_EPS)
+    return (np.array([0.0, zb, zs, zn, zt]), np.array([p["baseR"], p["bodyW"] / 2.0, p["shR"], nr, nr]))
+
+
+def _mono_slopes(x, y):
+    """nachylenia monotonicznej krzywej szescienne Hermite'a (Fritsch-Carlson / PCHIP): w lokalnych ekstremach 0, wewnatrz srednia harmoniczna
+    wazona odstepami; poczatek = pierwsze nachylenie sieczne, koniec = 0 (plaski szczyt szyi)"""
+    h, dl = np.diff(x), np.diff(y) / np.diff(x)
+    d = np.zeros(len(x))
+    for k in range(1, len(x) - 1):
+        if dl[k - 1] * dl[k] > 0:
+            w1, w2 = 2 * h[k] + h[k - 1], h[k] + 2 * h[k - 1]
+            d[k] = (w1 + w2) / (w1 / dl[k - 1] + w2 / dl[k])
+    d[0] = dl[0]
+    return d
+
+
+def sil_radius(z, p):
+    """promien sylwetki r(z): krzywa monotoniczna przez punkty sil_nodes (brzuch jest jej gladkim maksimum, szyja minimum); powyzej gory szyi 0"""
+    x, y = sil_nodes(p)
+    d = _mono_slopes(x, y)
+    z = np.asarray(z, dtype=float)
+    k = np.clip(np.searchsorted(x, z, side="right") - 1, 0, len(x) - 2)
+    h = x[k + 1] - x[k]
+    t = np.clip((z - x[k]) / h, 0.0, 1.0)
+    t2, t3 = t * t, t * t * t
+    r = (2 * t3 - 3 * t2 + 1) * y[k] + (t3 - 2 * t2 + t) * h * d[k] + (-2 * t3 + 3 * t2) * y[k + 1] + (t3 - t2) * h * d[k + 1]
+    return np.where(z > x[-1], 0.0, r)
+
+
 def bunny_profile(z, p=None):
-    """promien korpusu na wysokosci z = trzy czlony p-normy (wykladnik blend): brzuch (nadelipsoida, dol i gora z osobnymi wykladnikami
+    """promien korpusu na wysokosci z. Tryb sil = 1: krzywa sylwetki przez punkty (sil_radius) + glowa (elipsoida), laczone p-norma.
+    Dawny tryb: trzy czlony p-normy (wykladnik blend): brzuch (nadelipsoida, dol i gora z osobnymi wykladnikami
     bodyN / bodyNu, najszersze miejsce na z = 0,8 bodyHz + bellyDz), glowa (elipsoida: promien headR, os pionowa headR * headK) i szyja
     (walec o promieniu neckR miedzy brzuchem a srodkiem glowy; 0 = brak). Dla p=None dokladnie dawny profil krolika."""
     p = BODY_DEFAULTS if p is None else p
-    HZ, ZC = p["bodyHz"], -CUT_U * p["bodyHz"] + p["bellyDz"]
-    u = (z - ZC) / HZ
-    ub = np.clip(np.abs(u), 0, 1)
-    N = p["bodyN"] if p["bodyNu"] == p["bodyN"] else np.where(u < 0, p["bodyN"], p["bodyNu"])
-    rb = (p["bodyW"] / 2) * np.clip(1 - ub ** N, 0, None) ** (1 / N)
-    rb = np.where(np.abs(u) <= 1, rb, 0.0)
     HR, K = p["headR"], p["headK"]
+    sil = bool(p.get("sil", 0))
+    if sil:
+        ZC = 0.0
+        rb = sil_radius(z, p)
+    else:
+        HZ, ZC = p["bodyHz"], -CUT_U * p["bodyHz"] + p["bellyDz"]
+        u = (z - ZC) / HZ
+        ub = np.clip(np.abs(u), 0, 1)
+        N = p["bodyN"] if p["bodyNu"] == p["bodyN"] else np.where(u < 0, p["bodyN"], p["bodyNu"])
+        rb = (p["bodyW"] / 2) * np.clip(1 - ub ** N, 0, None) ** (1 / N)
+        rb = np.where(np.abs(u) <= 1, rb, 0.0)
     v = np.clip((z - p["headZ"]) / (HR * K), -1, 1)
     rh = HR * np.sqrt(np.clip(1 - v ** 2, 0, None))
     sp = p["blend"]
     s = rb ** sp + rh ** sp
     NR = min(p["neckR"], 0.95 * HR)
-    if NR > 0:
+    if NR > 0 and not sil:
         s = s + np.where((z >= ZC) & (z <= p["headZ"]), NR, 0.0) ** sp
     return s ** (1 / sp)
 

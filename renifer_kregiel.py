@@ -11,16 +11,17 @@ from standard import *                      # Model, Port, outline_R, rb_trims, 
 from parts import ANT_ANGLE, antler_flat, antler_geom, leaf_flat
 
 # --- parametry (domyslne = wzor ze zdjecia); klucze jak w suwakach podgladu
-BODY = SH.body_params(bodyW=49.0, bodyHz=60.0, bellyDz=-26.0, bodyN=3.0, bodyNu=1.7, headR=17.5, headZ=100.0, headK=1.2, neckR=10.2,
-                      blend=9.0, ribs=44)
-MOUNT = dict(earX=8.0, earTilt=14.0, earPitch=0.0, earT=5.0)                 # poroze: rozstaw gniazd, kat na zewnatrz, kat przod/tyl, grubosc
-ANT = dict(antS=1.0, antW=1.15, antLv=3, antSp=13.0, antTine=1.0, antAng=round(ANT_ANGLE, 3))
-LEAF = dict(leafL=17.0, leafW=8.5, leafT=3.4, leafAng=55.0, leafPos=60.0)   # boczne uszy-liscie: dlugosc, szerokosc, grubosc, kat od pionu, polozenie (kat od czubka glowy)
+BODY = SH.body_params(sil=1, bodyW=53.0, baseR=16.5, bellyZ=48.0, shZ=73.0, shR=17.0, neckZ=86.0, neckR=13.8, headR=18.5, headZ=104.0, headK=1.0,
+                      blend=9.0, ribs=44)          # sylwetka z punktow (sil = 1): podstawa, brzuch, barki, szyja + glowa; dopasowana do zdjecia (rms 0,3 mm)
+MOUNT = dict(earX=11.5, earTilt=12.0, earPitch=0.0, earT=5.0)                # poroze: rozstaw gniazd, kat na zewnatrz, kat przod/tyl, grubosc
+ANT = dict(antS=1.0, antW=1.0, antLv=2, antSp=13.0, antTine=1.0, antAng=round(ANT_ANGLE, 3))   # = dawne poroze renifera (2 poziomy), domyslne suwaki poroza
+ANT_K = dict(ANT, antW=1.35, antLv=3, antAng=44.0, antIn=1)                  # kregiel: 3 poziomy, grubsze galezie, odnogi do srodka (jak na zdjeciu; antIn = 0 daje dawny uklad)
+LEAF = dict(leafL=17.0, leafW=10.0, leafT=3.4, leafAng=55.0, leafPos=60.0)   # boczne uszy-liscie: dlugosc, szerokosc, grubosc, kat od pionu, polozenie (kat od czubka glowy)
 
 
 def params():
     """plaski slownik parametrow (do line.json i do podgladu)"""
-    return {**BODY, **MOUNT, **ANT, **LEAF}
+    return {**BODY, **MOUNT, **ANT_K, **LEAF}
 
 
 # =====================================================================================================
@@ -38,8 +39,17 @@ def leaf_frame(side, par=None):
     return mount_frame(side, SH.head_port(side, P, P["leafPos"], P["leafT"]), math.radians(P["leafAng"]), 0.0)
 
 
-def ant_part(mirror, par=None, res=0.1):
+def ant_ar(side, par=None):
+    """zakres lokalnej osi a poroza po stronie side: odnogi na zewnatrz (antIn = 0) albo do srodka (antIn = 1, jak na zdjeciu)"""
     P = par or params()
+    G = antler_geom(P["antLv"], P["antSp"], P["antTine"], P["antAng"], P["antS"])
+    return (-10, G["AR"]) if (side > 0) != bool(P.get("antIn", 0)) else (-G["AR"], 10)
+
+
+def ant_part(mirror, par=None, res=0.1):
+    """plaskie poroze; mirror = strona lewa (jak dawniej), a antIn = 1 odwraca odnogi do srodka"""
+    P = par or params()
+    mirror = bool(mirror) != bool(P.get("antIn", 0))
     return antler_flat(res, mirror, levels=P["antLv"], spacing=P["antSp"], tine=P["antTine"], angle=P["antAng"], s=P["antS"], w=P["antW"], T=P["earT"])
 
 
@@ -68,10 +78,11 @@ def extents(par=None):
     """pudelko siatki obliczen (xh, ylo, yhi, zhi): obejmuje korpus oraz lokalne pudelka poroza i uszu-lisci w ich ramkach (jak w podgladzie, buildReal)"""
     P = par or params()
     G = antler_geom(P["antLv"], P["antSp"], P["antTine"], P["antAng"], P["antS"])
-    xh, ylo, yhi = max(21.0, P["bodyW"] / 2 + 2.5), -max(21.0, P["bodyW"] / 2 + 2.5), max(21.0, P["bodyW"] / 2 + 2.5)
+    rmax = max(P["bodyW"] / 2, P["baseR"] if P.get("sil") else 0.0)
+    xh, ylo, yhi = max(21.0, rmax + 2.5), -max(21.0, rmax + 2.5), max(21.0, rmax + 2.5)
     zhi = SH.bunny_P0(1, P, P["earX"])[2] + 6
     A = P["leafW"] / 2 + 2
-    for fr_fn, sd_ar, L in ((ant_frame, lambda s: (-10, G["AR"]) if s > 0 else (-G["AR"], 10), G["Lc"]), (leaf_frame, lambda s: (-A, A), P["leafL"])):
+    for fr_fn, sd_ar, L in ((ant_frame, lambda s: ant_ar(s, P), G["Lc"]), (leaf_frame, lambda s: (-A, A), P["leafL"])):
         for s in (+1, -1):
             lo, hi = _frame_box(fr_fn(s, P), sd_ar(s), (-9, L + 3), (-1, 8))
             xh = max(xh, -lo[0] + 2, hi[0] + 2, 28.0 if fr_fn is ant_frame else 0.0)
@@ -95,7 +106,7 @@ def body_field(par=None, vox=0.35, sockets=False, fuse_ant=False, leaf=True):
     if fuse_ant:
         for s in (+1, -1):
             fn = part_fn(ant_part(s < 0, P), None, peg=False, plate_b0=-4.5)
-            F = add_local(F, axes, ant_frame(s, P), fn, a_rng=(-10, G["AR"]) if s > 0 else (-G["AR"], 10), b_rng=(-9, G["Lc"] + 3), c_rng=(-1, 8))
+            F = add_local(F, axes, ant_frame(s, P), fn, a_rng=ant_ar(s, P), b_rng=(-9, G["Lc"] + 3), c_rng=(-1, 8))
     if leaf:
         A = P["leafW"] / 2 + 2
         for s in (+1, -1):
@@ -128,7 +139,7 @@ def build(vox=0.35, par=None):
     parts = {}
     for s, nm, pn in SIDES:
         fp = ant_part(s < 0, P)
-        m = part_mesh(fp, rb_trims([(KREG, pn)]), True, (-10, G["AR"]) if s > 0 else (-G["AR"], 10), (-9, G["Lc"] + 3), 0.2)
+        m = part_mesh(fp, rb_trims([(KREG, pn)]), True, ant_ar(s, P), (-9, G["Lc"] + 3), 0.2)
         emit(m, f"renifer_kregiel_poroze_{nm}.stl", False, "druk na plecach; czop 5x5x8", style="rb")
         parts[f"renifer_kregiel_poroze_{nm}.stl"] = dict(mesh=trimesh.load(os.path.join(OUT, f"renifer_kregiel_poroze_{nm}.stl")), port=pn)
     print("== verify_set (korpus bez uszu-lisci + poroza) ==")

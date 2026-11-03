@@ -26,8 +26,9 @@ const gridOut = G => ({x0: G.x0, y0: G.y0, z0: G.z0, v: G.v, nx: G.nx, ny: G.ny,
 }
 // --- renifer kregiel: profil (szyja, brzuch gora/dol, glowa elipsoidalna), porty, ramki z pochyleniem przod/tyl, czesci plaskie (poroze N poziomow, uszy-liscie)
 {
-  const V = {kregiel: {}, glowa_wysoko: {headZ: 128, neckR: 9}, brzuch: {bellyDz: -10, bodyN: 2, bodyNu: 3.2, bodyHz: 50, bodyW: 42},
-             glowa_elips: {headK: 1.4, headR: 14, headZ: 96, blend: 14}, bez_szyi: {neckR: 0, headZ: 90, blend: 20}};
+  const V = {kregiel: {}, glowa_wysoko: {headZ: 128, neckZ: 110, neckR: 9}, brzuch: {bodyW: 46, bellyZ: 36, baseR: 22, shZ: 62, shR: 24},
+             glowa_elips: {headK: 1.4, headR: 14, headZ: 96, neckZ: 78, blend: 14}, waska_szyja: {neckR: 5, neckZ: 90, shZ: 66, shR: 12, bellyZ: 52},
+             stary_pnorma: {sil: 0, bodyW: 49, bodyHz: 60, bellyDz: -26, bodyN: 3, bodyNu: 1.7, headR: 17.5, headZ: 100, headK: 1.2, neckR: 10.2, blend: 9}};
   const zs = []; for (let z = 0; z <= 150; z += 0.37) zs.push(z);
   out.kreg = {zs, var: {}};
   for (const k in V) {
@@ -42,12 +43,12 @@ const gridOut = G => ({x0: G.x0, y0: G.y0, z0: G.z0, v: G.v, nx: G.nx, ny: G.ny,
   const pts = []; for (let a = -12; a <= 24; a += 0.6) for (let b = -5; b <= 80; b += 0.6) for (const c of [0.4, 1.5, 2.6, 4.0]) pts.push([a, b, c]);
   out.kreg.flat = {pts, parts: {}};
   const A0 = Object.assign(X.defaults('renifer_kregiel'), {});
-  const FV = {ant_def: ['ant', {antLv: 2, antSp: 13, antTine: 1, antAng: 38.121, antS: 1, antW: 1}, false],
+  const FV = {ant_def: ['ant', {antLv: 2, antSp: 13, antTine: 1, antAng: 38.121, antS: 1, antW: 1, antIn: 0}, false],
               ant3: ['ant', {}, false], ant5: ['ant', {antLv: 5, antSp: 10, antTine: 1.3, antAng: 50, antS: 1.2, antW: 1.3}, true],
-              ant1: ['ant', {antLv: 1, antTine: .7, antAng: 20, antS: .8}, false], leaf: ['leaf', {leafL: 22, leafW: 11, leafT: 4}, false]};
+              ant1: ['ant', {antLv: 1, antTine: .7, antAng: 20, antS: .8, antIn: 0}, false], ant_lewe_do_srodka: ['ant', {antIn: 1}, true], leaf: ['leaf', {leafL: 22, leafW: 11, leafT: 4}, false]};
   for (const k in FV) {
     const [kind, o, mir] = FV[k], P = Object.assign({}, A0, o), sp = X.earSpec(kind, P, 0.1), fp = sp.mk(mir);
-    out.kreg.flat.parts[k] = {kind, P: o, mirror: mir, L: sp.L, T: sp.T, ar: sp.ar(1), F: pts.map(p => fp.F(p[0], p[1], p[2]))};
+    out.kreg.flat.parts[k] = {kind, P: o, mirror: mir, L: sp.L, T: sp.T, ar: sp.ar(1), arL: sp.ar(-1), F: pts.map(p => fp.F(p[0], p[1], p[2]))};
   }
 }
 // --- jajko
@@ -112,8 +113,9 @@ if (stlDir) {
     for (const g of gs) { const f = (gs.length > 1 ? id + '_' + g.g : id) + '.stl'; fs.writeFileSync(path.join(stlDir, f), X.stlBytes(g.parts)); out.stl.push(f); }
   }
   if (process.argv[5] === 'all') {   // skrajne ustawienia suwakow renifera kregla: kazde musi dac szczelna siatke
-    const VAR = {rk_glowa_wysoko: {headZ: 128, neckR: 9}, rk_poroze5: {antLv: 5, antSp: 10, antTine: 1.3, antAng: 50, earPitch: 18, earTilt: 24, antS: 1.1},
-                 rk_wymienne: {detach: 1, earPitch: -10}, rk_nisko: {headZ: 92, bellyDz: -34, bodyNu: 1.3, leafAng: 80, antLv: 1}, rk_szeroki: {bodyW: 56, headR: 22, headK: 1.4, bodyHz: 72}};
+    const VAR = {rk_glowa_wysoko: {headZ: 128, neckZ: 110, neckR: 9}, rk_poroze5: {antLv: 5, antSp: 10, antTine: 1.3, antAng: 50, earPitch: 18, earTilt: 24, antS: 1.1},
+                 rk_wymienne: {detach: 1, earPitch: -10}, rk_nisko: {headZ: 92, neckZ: 76, shZ: 60, bellyZ: 30, leafAng: 80, antLv: 1},
+                 rk_szeroki: {bodyW: 62, baseR: 28, shR: 26, headR: 22, headK: 1.4}, rk_waska: {neckR: 5.5, neckZ: 90, shZ: 70, shR: 12}};
     for (const k in VAR) {
       const gs = X.exportGroups(X.buildModel('renifer_kregiel', Object.assign(X.defaults('renifer_kregiel'), VAR[k]), {vox: 0.5}));
       for (const g of gs) { const f = (gs.length > 1 ? k + '_' + g.g : k) + '.stl'; fs.writeFileSync(path.join(stlDir, f), X.stlBytes(g.parts)); out.stl.push(f); }

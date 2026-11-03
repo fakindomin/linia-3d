@@ -2,7 +2,7 @@
 Node ladowany jest rdzeniem podgladu (test_artifact.js); tu porownanie liczbowe: profile, porty, ramki, wneka jajka, POLA 3D (krolik, dynia,
 balwan na siatce 1 mm) oraz test dymny wszystkich 17 modeli (z reniferem kregiel: profil, porty, ramki, czesci plaskie). Zwraca kod 1, gdy cos sie rozjezdza.
 Uzycie:  python test_artifact.py [plik.html] [--print]
-  --print: dodatkowo eksportuje wszystkie 17 modeli i 5 skrajnych wariantow renifera kregiel (32 pliki STL, siatka 0,5 mm) tak jak przycisk 'Zapisz' w podgladzie i puszcza je przez verify_print.py
+  --print: dodatkowo eksportuje wszystkie 17 modeli i 6 skrajnych wariantow renifera kregiel (33 pliki STL, siatka 0,5 mm) tak jak przycisk 'Zapisz' w podgladzie i puszcza je przez verify_print.py
            (szczelnosc, zdegenerowane, samoprzeciecia, sciany wnek) - ta sama kontrola, co pliki z Pythona.
 """
 import sys, os, json, base64, subprocess, time
@@ -101,10 +101,11 @@ for name, fpj in FL["parts"].items():
     o, kind = fpj["P"], fpj["kind"]
     Pf = dict(RK.params(), **o)
     if kind == "ant":
-        fp = antler_flat(0.1, fpj["mirror"], levels=Pf["antLv"], spacing=Pf["antSp"], tine=Pf["antTine"], angle=Pf["antAng"], s=Pf["antS"], w=Pf["antW"], T=Pf["earT"])
+        fp = RK.ant_part(fpj["mirror"], Pf, 0.1)
         G = __import__("parts").antler_geom(Pf["antLv"], Pf["antSp"], Pf["antTine"], Pf["antAng"], Pf["antS"])
         check(f"  czesc {name}: dlugosc L (JS) vs antler_geom (+2 mm marginesu podgladu nie wchodzi w L)", abs(fpj["L"] - G["Lc"]), 1e-6)
-        check(f"  czesc {name}: zakres a (AR)", abs(fpj["ar"][1] - G["AR"]), 1e-6)
+        check(f"  czesc {name}: zakres a (AR), prawa strona (odnogi na zewnatrz albo do srodka)", float(np.abs(np.array(fpj["ar"]) - np.array(RK.ant_ar(+1, Pf))).max()), 1e-6)
+        check(f"  czesc {name}: zakres a (AR), lewa strona", float(np.abs(np.array(fpj["arL"]) - np.array(RK.ant_ar(-1, Pf))).max()), 1e-6)
     else:
         fp = leaf_flat(Pf["leafL"], Pf["leafW"], Pf["leafT"], 0.1)
     # JS (Canvas) i Python (PIL) rastruja kontur nieco inaczej (do ~0,4 mm na zaokraglonych zlaczach odnog; pole top ma nachylenie k = 2,2):

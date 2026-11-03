@@ -131,7 +131,7 @@ def build():
         ribs=rib_json([dict(N=SH.N_BUNNY, up=None, down=None)]), zport=R3(B.zport))
 
     # --- renifer: domyslne parametry poroza; renifer_kregiel: caly zestaw parametrow wzoru (renifer_kregiel.py)
-    M["renifer"] = dict(params=dict(RK.ANT, antLv=2))
+    M["renifer"] = dict(params=dict(RK.ANT))
     M["renifer_kregiel"] = dict(params=RK.params())
 
     # --- jajko

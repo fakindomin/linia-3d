@@ -30,7 +30,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `lib.py`, `parts.py`, `shapes.py` | rdzeń stylu żebrowanego (siatka voxelowa + marching cubes, części płaskie, uchwyty) |
 | `lp.py`, `lp_parts.py` | rdzeń lowpoly (pierścienie, boolean przez manifold3d, liść, poroże) |
 | `build_*.py`, `ears_A.py` | skrypty budujące STL (kolejność w `build_all.sh`) |
-| `renifer_kregiel.py` | renifer z parametrami wzoru (szyja, brzuch, głowa, poroże N poziomów, uszy-liście); parametry = suwaki podglądu |
+| `renifer_kregiel.py` | renifer z parametrami wzoru (sylwetka z punktów: podstawa, brzuch, barki, szyja, głowa; poroże N poziomów z odnogami do środka, uszy-liście); parametry = suwaki i punkty na rysunku w podglądzie |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |
 | `meshclean.py`, `clean_stl.py` | usuwanie mikro-trójkątów bez otwierania siatki (wpięte w `lib.save`); `clean_stl.py` czyści istniejące pliki |

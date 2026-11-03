@@ -51,6 +51,19 @@ h1{font:600 22px/1.1 var(--f-display);margin:0;letter-spacing:-.01em}
 .mdesc{color:var(--muted);font-size:13.5px;margin:0}
 .group{display:flex;flex-direction:column;gap:10px;min-width:0}
 .group h2{margin:0;font:600 11px/1 var(--f-body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.sil{display:flex;flex-direction:column;gap:8px}
+.sil svg{width:100%;height:auto;max-height:430px;display:block;touch-action:none;background:var(--chip);border-radius:10px;user-select:none;-webkit-user-select:none}
+.sil .gl{stroke:var(--line);stroke-width:.35}
+.sil .gt,.sil .lb{font:400 4.6px var(--f-mono);fill:var(--muted)}
+.sil .lb tspan.v{fill:var(--ink)}
+.sil .out{fill:var(--accent);fill-opacity:.2;stroke:var(--accent);stroke-width:.9;stroke-linejoin:round}
+.sil .ld{stroke:var(--muted);stroke-width:.3;stroke-dasharray:1.2 1.6}
+.sil .h{cursor:grab;outline:none}
+.sil .h .hit{fill:transparent}
+.sil .h .dot{fill:var(--panel);stroke:var(--accent);stroke-width:1.3}
+.sil .h.on .dot,.sil .h:focus-visible .dot{fill:var(--accent)}
+.sil .h:focus-visible .hit{stroke:var(--accent);stroke-width:.6;stroke-dasharray:1.5 1.5}
+.sil .note{color:var(--muted);font-size:12.5px;margin:0}
 .row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline}
 .row label{font-size:14px}
 .row output{font:400 12.5px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
@@ -481,16 +494,38 @@ function partFn(fp,plateB0,trims,peg,cmax){
 /* ===== kształty z linii (porty skryptów Pythona) ===== */
 const nRibs=r=>Math.round(2*Math.PI*r/3.4);
 const IDM={O:[0,0,0],A:[1,0,0],B:[0,1,0],C:[0,0,1]};
+/* sylwetka z punktów (tryb sil): monotoniczna krzywa Hermite'a (PCHIP) przez podstawę, brzuch, barki, szyję i górę szyi; identyczna z shapes.sil_radius */
+const SIL_EPS=1;
+function silSpec(P){
+  const nr=Math.min(P.neckR||0,0.95*P.headR),zb=Math.max(P.bellyZ,SIL_EPS),zs=Math.max(P.shZ,zb+SIL_EPS),zn=Math.max(P.neckZ,zs+SIL_EPS),zt=Math.max(P.headZ,zn+SIL_EPS);
+  const x=[0,zb,zs,zn,zt],y=[P.baseR,P.bodyW/2,P.shR,nr,nr],h=[],dl=[],d=[0,0,0,0,0];
+  for(let k=0;k<4;k++){h[k]=x[k+1]-x[k];dl[k]=(y[k+1]-y[k])/h[k];}
+  for(let k=1;k<4;k++)if(dl[k-1]*dl[k]>0){const w1=2*h[k]+h[k-1],w2=h[k]+2*h[k-1];d[k]=(w1+w2)/(w1/dl[k-1]+w2/dl[k]);}
+  d[0]=dl[0];
+  return{x,y,d,h};
+}
+function silR(S,z){
+  if(z>S.x[4])return 0;
+  let k=0;while(k<3&&z>=S.x[k+1])k++;
+  const h=S.h[k],t=clamp((z-S.x[k])/h,0,1),t2=t*t,t3=t2*t;
+  return(2*t3-3*t2+1)*S.y[k]+(t3-2*t2+t)*h*S.d[k]+(-2*t3+3*t2)*S.y[k+1]+(t3-t2)*h*S.d[k+1];
+}
 function bunDef(P){
-  /* korpus = trzy człony p-normy: brzuch (nadelipsoida; dół i góra z osobnymi wykładnikami), głowa (elipsoida) i szyja (walec) */
-  const B={R:P.bodyW/2,HZ:P.bodyHz,N:P.bodyN,NU:P.bodyNu||P.bodyN,HR:P.headR,K:P.headK||1,HC:P.headZ,SP:P.blend,amp:P.ribDepth/2,pw:P.ribPow,n:Math.round(P.ribs)};
+  /* korpus = trzy człony p-normy: brzuch (nadelipsoida; dół i góra z osobnymi wykładnikami), głowa (elipsoida) i szyja (walec);
+     w trybie sil brzuch + szyja to jedna krzywa przez punkty (silSpec), a głowa zostaje elipsoidą */
+  const B={R:P.bodyW/2,HZ:P.bodyHz,N:P.bodyN,NU:P.bodyNu||P.bodyN,HR:P.headR,K:P.headK||1,HC:P.headZ,SP:P.blend,amp:P.ribDepth/2,pw:P.ribPow,n:Math.round(P.ribs),SIL:!!P.sil};
   B.ZC=0.8*B.HZ+(P.bellyDz||0);
   B.NR=Math.min(P.neckR||0,0.95*B.HR);
+  if(B.SIL)B.S=silSpec(P);
   B.prof=z=>{
-    const u=(z-B.ZC)/B.HZ,ub=Math.min(Math.abs(u),1),N=u<0?B.N:B.NU;
-    const rb=Math.abs(u)<=1?B.R*Math.pow(Math.max(1-Math.pow(ub,N),0),1/N):0;
+    let rb,rn=0;
+    if(B.SIL)rb=silR(B.S,z);
+    else{
+      const u=(z-B.ZC)/B.HZ,ub=Math.min(Math.abs(u),1),N=u<0?B.N:B.NU;
+      rb=Math.abs(u)<=1?B.R*Math.pow(Math.max(1-Math.pow(ub,N),0),1/N):0;
+      rn=(B.NR>0&&z>=B.ZC&&z<=B.HC)?B.NR:0;
+    }
     const v=clamp((z-B.HC)/(B.HR*B.K),-1,1),rh=B.HR*Math.sqrt(Math.max(1-v*v,0));
-    const rn=(B.NR>0&&z>=B.ZC&&z<=B.HC)?B.NR:0;
     return Math.pow(Math.pow(rb,B.SP)+Math.pow(rh,B.SP)+Math.pow(rn,B.SP),1/B.SP);
   };
   const r0=Math.hypot(P.earX,Y0);
@@ -564,14 +599,15 @@ function earSpec(kind,P,res0){
     const sc=p=>[p[0]*s,p[1]*s];
     const g=b=>b<=18?-3+(b+3)*(last+3)/21:last+(b-18);              /* rozciągnięcie trzonu; korona (b>18) zostaje bez zmian */
     const beam=[[0,-3],[0.3,4],[0.4,12],[0,20],[-0.8,26.5],[-1.2,28.6]].map(p=>[p[0],g(p[1])]);
-    return{L:Lc,T,ar:sd=>sd>0?[-10,AR]:[-AR,10],mk:mirror=>{
+    const inn=!!P.antIn;                                               /* odnogi do środka: odbicie części i zakresu a */
+    return{L:Lc,T,ar:sd=>(sd>0)!==inn?[-10,AR]:[-AR,10],mk:mirror=>{
       const cv=new Canvas(A0,A1,-4.5,Lc+2,res);
       cv.path(beam.map(sc),4.2*wm,1);
       cv.rect(-3.4*s,3.4*s,-3*s,4*s,1);
       for(let i=0;i<nL;i++){const a=0.5-0.2*i,b=5+i*sp;
         cv.path([[a,b],[a+dx/2,b+dy/2],[a+dx,b+dy]].map(sc),3.7*wm,1);}
       cv.closeR(2.0);cv.openR(1.2);
-      return new FlatPart(cv,T,{w:1,k:2.2,mirror});}};
+      return new FlatPart(cv,T,{w:1,k:2.2,mirror:mirror!==inn});}};
   }
   return null;
 }
@@ -725,7 +761,7 @@ function buildReal(id,P,opt){
   if(F.kind==='egg')return buildEgg(id,P,vox,ex,parts,warn,opt);
   /* figurka na korpusie bazowym */
   const B=bunDef(P),tilt=P.earTilt*D2R,pitch=(P.earPitch||0)*D2R,frameFn=side=>mountFrame(side,B.P0(side),tilt,pitch);
-  const cres=opt.lo||opt.draft?0.2:0.1;let spec=F.ears?earSpec(F.ears,P,cres):null,xh=Math.max(21,B.R+2.5),ylo=-xh,yhi=xh,zhi=B.P0(1)[2]+6;
+  const cres=opt.lo||opt.draft?0.2:0.1;let spec=F.ears?earSpec(F.ears,P,cres):null,xh=Math.max(21,Math.max(B.R,B.SIL?(P.baseR||0):0)+2.5),ylo=-xh,yhi=xh,zhi=B.P0(1)[2]+6;
   if(spec)zhi=Math.max(zhi,B.P0(1)[2]+spec.L*Math.cos(tilt)*Math.cos(pitch)+6);
   if(F.ears==='ant')xh=Math.max(28,B.P0(1)[0]+spec.ar(1)[1]*Math.cos(tilt)+3);
   const grow=(fr,sp,sd)=>{const q=frameBox(fr,sp.ar(sd),[-9,sp.L+3],[-1,8]);
@@ -862,7 +898,7 @@ const M={
   mis:{n:'Miś',desc:'Okrągłe uszka na szyjkach.',f:{real:1,ears:'round'},g:['bun','belly','rib','mount','earRound'],d:bun({earR:6,earBc:3.6})},
   sowa:{n:'Sowa',desc:'Kępki piór z rysami, oczy i krótki dziób.',tune:'earL',f:{real:1,ears:'tuft',eyes:1},g:['bun','belly','rib','mount','earTuft','eyes','beakS'],d:bun({earL:16,earW:9.6,earLean:7,eyeS:.37,eyeX:6.3,beakL:4.2,beakW:3.2})},
   renifer:{n:'Renifer',desc:'Ten sam korpus i poroże. Liczbę poziomów, odstęp, kąt odnóg i kąt całego poroża ustawiasz suwakami.',tune:'antS',f:{real:1,ears:'ant'},g:['bun','belly','rib','mountR','ant'],d:bun(Object.assign({earT:5},ANT))},
-  renifer_kregiel:{n:'Renifer – kręgiel',desc:'Smukły korpus w kształcie kręgla z szyją, jajowata głowa, poroże o trzech poziomach i boczne uszy-liście. Głowę podnosisz i opuszczasz suwakiem wysokości, szyja rośnie razem z nią.',tune:'antS',f:{real:1,ears:'ant',leaf:1},g:['bun','belly','head','rib','mountR','ant','leaf'],
+  renifer_kregiel:{n:'Renifer – kręgiel',desc:'Korpus w kształcie kręgla z talią szyi, głowa-kula, poroże o trzech poziomach i boczne uszy-liście. Sylwetkę (podstawa, brzuch, barki, szyja, głowa) ustawiasz, przeciągając punkty na rysunku albo suwakami.',tune:'antS',f:{real:1,ears:'ant',leaf:1},g:['silEd','brzuch','szyja','glowa','rib','mountR','ant','leaf'],
     d:bun(Object.assign({},ANT,KREG))},
   aniol:{n:'Anioł',desc:'Aureola na wsporniku i dwa skrzydła z rysami piór.',tune:'haloZ',f:{real:1,wings:1},g:['bun','belly','rib','halo','wing'],d:bun({haloZ:139,haloRo:10.5,haloRi:6.8,haloT:3.6,wingS:1,wingA:17.7,wingZ:0,wingC:-7.2,wingT:3.1})},
   krasnal:{n:'Krasnal',desc:'Korpus i wymienna żebrowana czapka na głowę (dwa pliki).',tune:'hatTop',f:{real:1,hat:'krasnal'},g:['bun','belly','rib','hatB','mountX'],d:bun({hatTop:150,hatRb:19.7,hatP:1.1,cuffH:8,pomR:5.8})},
@@ -967,6 +1003,21 @@ const GR={
     {k:'headZ',l:'Wysokość głowy (w górę / w dół)',min:84,max:140,step:1,f:'mm'},
     {k:'neckR',l:'Szyja: promień walca między brzuchem a głową (0 = brak)',min:0,max:16,step:.2,f:'mm'},
     {k:'blend',l:'Płynność szyi (mniej = głębsza szyja)',min:6,max:40,step:1,f:'int'}]},
+  silEd:{t:'Sylwetka: przeciągaj punkty',custom:'sil',items:[]},
+  brzuch:{t:'Brzuch',items:[
+    {k:'bodyW',l:'Szerokość w najszerszym miejscu',min:36,max:64,step:.5,f:'mm'},
+    {k:'bellyZ',l:'Wysokość najszerszego miejsca',min:14,max:90,step:1,f:'mm'},
+    {k:'baseR',l:'Promień podstawy (dołu)',min:8,max:30,step:.5,f:'mm'},
+    {k:'shZ',l:'Barki: wysokość',min:30,max:110,step:1,f:'mm'},
+    {k:'shR',l:'Barki: promień (więcej = pełniejsze ramiona)',min:8,max:30,step:.5,f:'mm'}]},
+  szyja:{t:'Szyja',items:[
+    {k:'neckZ',l:'Wysokość najwęższego miejsca',min:56,max:135,step:1,f:'mm'},
+    {k:'neckR',l:'Promień w najwęższym miejscu',min:4,max:20,step:.2,f:'mm'}]},
+  glowa:{t:'Głowa',items:[
+    {k:'headR',l:'Wielkość głowy (promień)',min:11,max:26,step:.5,f:'mm'},
+    {k:'headZ',l:'Wysokość środka głowy (w górę / w dół)',min:80,max:145,step:1,f:'mm'},
+    {k:'headK',l:'Wydłużenie głowy w pionie (1 = kula)',min:.8,max:1.5,step:.02,f:'num'},
+    {k:'blend',l:'Wtopienie głowy w szyję (mniej = gładsze przejście)',min:4,max:40,step:1,f:'int'}]},
   belly:{t:'Brzuch',items:[
     {k:'bodyHz',l:'Wysokość brzucha (półoś pionowa)',min:36,max:72,step:1,f:'mm'},
     {k:'bellyDz',l:'Położenie najszerszego miejsca (w górę / w dół)',min:-34,max:16,step:1,f:'mm'},
@@ -986,7 +1037,7 @@ const GR={
     {k:'detach',l:'Wymienne: czop 5×5×8 i gniazda, osobne pliki',type:'bool'},
     {k:'explode',l:'Rozsunięcie wymiennych części w podglądzie',min:0,max:60,step:1,f:'mm'}]},
   mountR:{t:'Mocowanie poroża',items:[
-    {k:'earX',l:'Rozstaw poroża od osi',min:3,max:11,step:.5,f:'mm'},
+    {k:'earX',l:'Rozstaw poroża od osi',min:3,max:14,step:.5,f:'mm'},
     {k:'earTilt',l:'Kąt poroża na zewnątrz',min:0,max:40,step:1,f:'deg'},
     {k:'earPitch',l:'Kąt poroża do przodu (+) / do tyłu (−)',min:-30,max:30,step:1,f:'deg'},
     {k:'earT',l:'Grubość poroża i uszu',min:3,max:8,step:.1,f:'mm'},
@@ -1018,7 +1069,8 @@ const GR={
     {k:'antLv',l:'Liczba poziomów (odnóg)',min:1,max:5,step:1,f:'int'},
     {k:'antSp',l:'Odstęp między poziomami',min:8,max:18,step:.5,f:'mm'},
     {k:'antTine',l:'Długość odnóg',min:.6,max:1.6,step:.02,f:'num'},
-    {k:'antAng',l:'Kąt odnóg względem gałęzi głównej',min:15,max:65,step:1,f:'deg'}]},
+    {k:'antAng',l:'Kąt odnóg względem gałęzi głównej',min:15,max:65,step:1,f:'deg'},
+    {k:'antIn',l:'Odnogi zwrócone do środka (jak na zdjęciu)',type:'bool'}]},
   leaf:{t:'Uszy-liście (przytopione do głowy)',items:[
     {k:'leafL',l:'Długość uszu',min:10,max:36,step:.5,f:'mm'},
     {k:'leafW',l:'Szerokość uszu',min:5,max:16,step:.5,f:'mm'},
@@ -1120,7 +1172,7 @@ const LS='zebrowana-kolekcja-v3';
 let params={},cur='krolik',qual=1;
 ORDER.forEach(id=>params[id]=defaults(id));
 try{const s=JSON.parse(localStorage.getItem(LS)||'null');
-  if(s&&s.params){ORDER.forEach(id=>{if(s.params[id])for(const k in params[id])if(typeof s.params[id][k]==='number')params[id][k]=s.params[id][k];});}
+  if(s&&s.params){ORDER.forEach(id=>{if(params[id].sil&&!(s.params[id]&&s.params[id].sil))return;if(s.params[id])for(const k in params[id])if(typeof s.params[id][k]==='number')params[id][k]=s.params[id][k];});}
   if(s&&M[s.cur])cur=s.cur;
   if(s&&typeof s.qual==='number'&&s.qual>=0&&s.qual<3)qual=s.qual;}catch(e){}
 let saveT=0;
@@ -1203,7 +1255,9 @@ function rebuild(draft){
   $('#dims').textContent='szer. '+nf(dims.w)+' · wys. '+nf(dims.h)+' · gł. '+nf(dims.d)+' mm'+(draft?'  ·  szkic':'');
   const w=$('#warns');w.textContent='';res.warn.forEach(t=>{const s=document.createElement('span');s.className='warn';s.textContent=t;w.appendChild(s);});
 }
+let silRedraw=null;
 function schedule(){
+  if(silRedraw)silRedraw();
   if(!buildQ)buildQ=requestAnimationFrame(()=>{buildQ=0;rebuild(true);});
   clearTimeout(refineT);refineT=setTimeout(()=>rebuild(false),280);persist();
 }
@@ -1245,7 +1299,69 @@ function makeSlider(it,P,out,id){
     else if(k==='Home')v=it.min;else if(k==='End')v=it.max;
     if(v!==null){e.preventDefault();set(v);}
   });
+  sl._sync=()=>{out.textContent=FMT[it.f](P[it.k]);paint();};
   paint();return sl;
+}
+/* ---- edytor sylwetki (renifer kręgiel): profil z uchwytami; przeciąganie zmienia te same parametry co suwaki Brzuch / Szyja / Głowa ---- */
+const SVGNS='http://www.w3.org/2000/svg';
+function svgEl(n,a,parent){const e=document.createElementNS(SVGNS,n);for(const k in a)e.setAttribute(k,a[k]);if(parent)parent.appendChild(e);return e;}
+function renderSil(box,P){
+  const IT={};['brzuch','szyja','glowa'].forEach(g=>GR[g].items.forEach(i=>IT[i.k]=i));
+  const snap=(k,v)=>{const it=IT[k];return clamp(parseFloat((Math.round((v-it.min)/it.step)*it.step+it.min).toFixed(4)),it.min,it.max);};
+  const sec=document.createElement('section');sec.className='group sil';
+  const h=document.createElement('h2');h.textContent='Sylwetka: przeciągaj punkty';sec.appendChild(h);
+  let ZT=152;const X0=-70,W=170;
+  const svg=svgEl('svg',{viewBox:X0+' 0 '+W+' '+(ZT+8),role:'group','aria-label':'Sylwetka: punkty podstawy, brzucha, barków, szyi i głowy'},sec);
+  const grid=svgEl('g',{},svg);
+  for(let z=0;z<=200;z+=25){svgEl('line',{class:'gl',x1:-68,x2:98,y1:0,y2:0,'data-z':z},grid);const t=svgEl('text',{class:'gt',x:-68,y:0,'data-z':z},grid);t.textContent=z+' mm';}
+  const out=svgEl('path',{class:'out'},svg);
+  const lbg=svgEl('g',{},svg);
+  const defs=[
+    {id:'base',n:'Podstawa',lab:S=>['⌀'+(2*P.baseR).toFixed(0)],pos:S=>[S.y[0],0],set:(x,z)=>{P.baseR=snap('baseR',x);},name:'podstawa: promień'},
+    {id:'belly',n:'Brzuch',lab:S=>['⌀'+P.bodyW.toFixed(0)+' · '+S.x[1].toFixed(0)+' mm'],pos:S=>[S.y[1],S.x[1]],set:(x,z)=>{P.bodyW=snap('bodyW',2*x);P.bellyZ=snap('bellyZ',z);},name:'brzuch: szerokość i wysokość'},
+    {id:'sh',n:'Barki',lab:S=>['⌀'+(2*S.y[2]).toFixed(0)+' · '+S.x[2].toFixed(0)+' mm'],pos:S=>[S.y[2],S.x[2]],set:(x,z)=>{P.shR=snap('shR',x);P.shZ=snap('shZ',z);},name:'barki: promień i wysokość'},
+    {id:'neck',n:'Szyja',lab:S=>['⌀'+(2*S.y[3]).toFixed(1)+' · '+S.x[3].toFixed(0)+' mm'],pos:S=>[S.y[3],S.x[3]],set:(x,z)=>{P.neckR=snap('neckR',x);P.neckZ=snap('neckZ',z);},name:'szyja: promień i wysokość'},
+    {id:'headR',n:'Głowa',lab:S=>['⌀'+(2*P.headR).toFixed(0)+' · '+P.headZ.toFixed(0)+' mm'],pos:S=>[P.headR,P.headZ],set:(x,z)=>{P.headR=snap('headR',x);},name:'głowa: rozmiar'},
+    {id:'headC',pos:S=>[0,P.headZ],set:(x,z)=>{const nz=snap('headZ',z),d=nz-P.headZ;P.headZ=nz;P.neckZ=clamp(P.neckZ+d,IT.neckZ.min,IT.neckZ.max);},name:'głowa i szyja: wysokość'},
+    {id:'headT',pos:S=>[0,P.headZ+P.headR*(P.headK||1)],set:(x,z)=>{P.headK=snap('headK',(z-P.headZ)/P.headR);},name:'głowa: wydłużenie'}
+  ];
+  defs.forEach(d=>{
+    d.g=svgEl('g',{class:'h',tabindex:0,role:'slider','aria-label':d.name,'aria-valuetext':''},svg);
+    svgEl('circle',{class:'hit',r:7},d.g);svgEl('circle',{class:'dot',r:d.id==='headC'||d.id==='headT'?2.4:3.2},d.g);
+    if(d.lab){d.ld=svgEl('line',{class:'ld'},lbg);d.tx=svgEl('text',{class:'lb',x:46},lbg);d.t1=svgEl('tspan',{x:46},d.tx);d.t1.textContent=d.n;d.t2=svgEl('tspan',{x:46,dy:4.8,class:'v'},d.tx);}
+  });
+  const draw=()=>{
+    const B=bunDef(P),S=silSpec(P);
+    const nz=Math.max(152,Math.ceil(B.top+6));if(nz!==ZT){ZT=nz;svg.setAttribute('viewBox',X0+' 0 '+W+' '+(ZT+8));}
+    const pts=[];for(let z=0;z<=B.top;z+=0.75)pts.push([B.prof(z),z]);pts.push([B.prof(B.top),B.top]);
+    const f=q=>q[0].toFixed(2)+' '+(ZT-q[1]).toFixed(2);
+    out.setAttribute('d','M'+pts.map(f).join('L')+'L'+pts.slice().reverse().map(q=>f([-q[0],q[1]])).join('L')+'Z');
+    grid.querySelectorAll('[data-z]').forEach(e=>{const y=ZT-(+e.dataset.z);e.style.display=y<3?'none':'';if(e.tagName==='line'){e.setAttribute('y1',y);e.setAttribute('y2',y);}else e.setAttribute('y',y-1);});
+    let prev=-1e9;
+    defs.map(d=>({d,q:d.pos(S)})).sort((u,v)=>v.q[1]-u.q[1]).forEach(({d,q})=>{
+      d.g.setAttribute('transform','translate('+q[0].toFixed(2)+' '+(ZT-q[1]).toFixed(2)+')');
+      d.g.setAttribute('aria-valuetext',q.map(v=>v.toFixed(1)).join(' / '));
+      if(d.lab){const y=ZT-q[1],ly=Math.max(y,prev+11);prev=ly;   /* etykiety nie nachodzą na siebie */
+        d.ld.setAttribute('x1',q[0]+4);d.ld.setAttribute('x2',44);d.ld.setAttribute('y1',y);d.ld.setAttribute('y2',ly);
+        d.tx.setAttribute('y',ly-1.2);d.t1.setAttribute('y',ly-1.2);d.t2.setAttribute('y',ly-1.2);d.t2.textContent=d.lab(S)[0];}
+    });
+  };
+  const toSvg=e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(svg.getScreenCTM().inverse());return[q.x,ZT-q.y];};
+  const syncSliders=()=>box.querySelectorAll('.sl').forEach(el=>el._sync&&el._sync());
+  defs.forEach(d=>{
+    let grab=null;
+    d.g.addEventListener('pointerdown',e=>{d.g.setPointerCapture(e.pointerId);const q=toSvg(e),c=d.pos(silSpec(P));grab={id:e.pointerId,off:[c[0]-q[0],c[1]-q[1]]};d.g.classList.add('on');e.preventDefault();});
+    d.g.addEventListener('pointermove',e=>{if(!grab||e.pointerId!==grab.id)return;const q=toSvg(e);d.set(q[0]+grab.off[0],q[1]+grab.off[1]);syncSliders();schedule();});
+    const end=()=>{grab=null;d.g.classList.remove('on');};
+    d.g.addEventListener('pointerup',end);d.g.addEventListener('pointercancel',end);d.g.addEventListener('lostpointercapture',end);
+    d.g.addEventListener('keydown',e=>{
+      const m={ArrowRight:[1,0],ArrowLeft:[-1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(!m)return;
+      e.preventDefault();const c=d.pos(silSpec(P));d.set(c[0]+m[0],c[1]+m[1]);syncSliders();schedule();});
+  });
+  const note=document.createElement('p');note.className='note';
+  note.textContent='Poziomo zmieniasz szerokość, pionowo wysokość punktu. Środkowy punkt głowy przesuwa też szyję, boczny zmienia rozmiar głowy, górny ją wydłuża.';
+  sec.appendChild(note);box.appendChild(sec);
+  silRedraw=draw;draw();
 }
 function renderControls(){
   $('#mname').textContent=M[cur].n;$('#mdesc').textContent=M[cur].desc;
@@ -1256,7 +1372,9 @@ function renderControls(){
   $('#allInfo').textContent=ORDER.length+' modeli, '+ORDER.reduce((s,id)=>s+fileNames(id,params[id]).length,0)+' plików STL w jednym archiwum.';
   const box=$('#controls');box.textContent='';
   const P=params[cur];
+  silRedraw=null;
   groupsFor(cur).forEach(g=>{
+    if(g.custom==='sil'){renderSil(box,P);return;}
     const sec=document.createElement('section');sec.className='group';
     const h=document.createElement('h2');h.textContent=g.t;sec.appendChild(h);
     g.items.forEach(it=>{
@@ -1297,7 +1415,7 @@ function note(t){const n=$('#note');n.textContent=t;clearTimeout(noteT);noteT=se
 
 $('#btnReset').addEventListener('click',()=>{params[cur]=defaults(cur);renderControls();rebuild(false);persist();note('Przywrócono ustawienia modelu.');});
 const FAM={bun:['bodyW','bodyHz','bodyN','bodyNu','bellyDz','neckR','headR','headZ','blend','ribs','earTilt','earPitch','earX','earT'],egg:['eggW','eggH','eggZ','eggNL','eggNU','seam','cavR','floor','lipH','wallCup','ceilZ','ribs']};
-const famOf=P=>'bodyW' in P?'bun':'eggW' in P?'egg':null;
+const famOf=P=>P.sil?null:'bodyW' in P?'bun':'eggW' in P?'egg':null;
 $('#btnAlign').addEventListener('click',()=>{
   const src=params[cur],fam=famOf(src);
   ORDER.forEach(id=>{if(id===cur)return;const P=params[id];

@@ -153,23 +153,32 @@ Zmiana stałej/profilu: edytuj Python → `export_line_json.py` → `build_artif
 
 ## 9a. Korpus z parametrami: szyja, brzuch, głowa, poroże N poziomów, uszy-liście (renifer „kręgiel”)
 
-Profil korpusu bazowego (`shapes.bunny_profile(z, p)`) to **trzy człony p-normy** (wykładnik `blend`): brzuch (nadelipsoida, dół i góra z osobnymi wykładnikami `bodyN` / `bodyNu`,
-najszersze miejsce na `0,8·bodyHz + bellyDz`), głowa (elipsoida: promień `headR`, oś pionowa `headR·headK`) i **szyja** (walec `neckR` od brzucha do środka głowy, 0 = brak).
-Wartości domyślne (`BODY_DEFAULTS`: `bodyNu = bodyN`, `bellyDz = 0`, `neckR = 0`, `headK = 1`) dają dokładnie dawny profil królika (różnica 0,0). Głowę podnosi/opuszcza `headZ`;
-szyja rośnie razem z nią, więc głowa się nie odrywa (podgląd ostrzega, gdy przerwa jednak powstaje). Port poroża: `bunny_P0(side, p, earX)` (uwzględnia `headK`).
+Profil korpusu bazowego (`shapes.bunny_profile(z, p)`) ma dwa tryby; w obu głowa to elipsoida (promień `headR`, oś pionowa `headR·headK`, środek `headZ`), łączona z resztą p-normą (wykładnik `blend`):
 
-* Poroże (`parts.antler_geom` / `antler_flat`): gałąź główna + `antLv` odnóg (1–5) co `antSp` mm, każda o długości `12,965·antTine` pod kątem `antAng` od osi gałęzi; trzon gałęzi rozciąga się
-  do ostatniej odnogi, korona zostaje. Domyślne (2, 13, 1, 38,121°) = dawne poroże (maska i pole `top` identyczne). `antS` = rozmiar, `antW` = grubość gałęzi, `earT` = grubość płaskownika.
+* **Tryb p-normy** (`sil = 0`, domyślny: królik, kot, lis, miś, sowa, dawny renifer, anioł, krasnal, Mikołaj): brzuch to nadelipsoida (dół i góra z osobnymi wykładnikami `bodyN` / `bodyNu`, najszersze miejsce
+  na `0,8·bodyHz + bellyDz`) i opcjonalna szyja (walec `neckR` od brzucha do środka głowy, 0 = brak). Wartości domyślne (`BODY_DEFAULTS`: `bodyNu = bodyN`, `bellyDz = 0`, `neckR = 0`, `headK = 1`) dają dokładnie
+  dawny profil królika (różnica 0,0).
+* **Tryb sylwetki** (`sil = 1`, renifer „kręgiel”): brzuch i szyja to **jedna krzywa przez punkty** (`shapes.sil_nodes` / `sil_radius`), a nie dwie bryły. Punkty (z, r) od dołu: podstawa `(0, baseR)`,
+  brzuch `(bellyZ, bodyW/2)`, barki `(shZ, shR)`, szyja `(neckZ, neckR)` i góra szyi `(headZ, neckR)`. Krzywa to sześcienna krzywa Hermite'a typu PCHIP
+  (nachylenia: 0 w lokalnych ekstremach, średnia harmoniczna ważona odstępami w środku, sieczna na początku, 0 na końcu), więc brzuch jest gładkim maksimum, szyja gładkim minimum, a nic nie przestrzela.
+  Wysokości są wymuszane rosnąco (odstęp ≥ `SIL_EPS` = 1 mm), promień szyi nie przekracza 0,95 promienia głowy, powyżej góry szyi krzywa daje 0. Ten sam algorytm jest w `silSpec` / `silR` (podgląd); zgodność
+  JS ↔ Python do 4e-15 mm. W podglądzie sylwetkę ustawia się, przeciągając punkty na rysunku (podstawa, brzuch, barki, szyja, głowa), albo suwakami Brzuch / Szyja / Głowa; oba sposoby zmieniają te same parametry.
+  Wzór kręgla jest dopasowany do zdjęcia (odchylenie średnie 0,3 mm, maks. 0,7 mm).
+
+Głowę podnosi/opuszcza `headZ`; w trybie sylwetki szyja idzie razem z nią (`neckZ`), więc głowa się nie odrywa (podgląd ostrzega, gdy przerwa jednak powstaje). Port poroża: `bunny_P0(side, p, earX)` (uwzględnia `headK`).
+
+* Poroże (`parts.antler_geom` / `antler_flat`): gałąź główna + `antLv` odnóg (1–5) co `antSp` mm, każda o długości `12,963·antTine` pod kątem `antAng` od osi gałęzi; `antIn = 1` zwraca odnogi do środka (jak na zdjęciu, `renifer_kregiel.ant_part` / `ant_ar`); trzon gałęzi rozciąga się
+  do ostatniej odnogi, korona zostaje. Domyślne (2, 13, 1, 38,108°) = dawne poroże (maska i pole `top` identyczne). `antS` = rozmiar, `antW` = grubość gałęzi, `earT` = grubość płaskownika.
 * Kąty: `earTilt` (na zewnątrz, standard 14°), **`earPitch`** (do przodu +, do tyłu −; obrót ramki wokół osi a, `mount_frame(side, P0, tilt, pitch)`; 0 = dawna ramka), kąt odnóg `antAng`
   i kąt bocznych uszu `leafAng` (od pionu).
 * Boczne ucho-liść (`parts.leaf_flat`, `shapes.head_port`): przytopione do głowy w punkcie pod kątem `leafPos` od czubka, ostry czubek, bez owalu, grubość `leafT` (ramka: y = T/2 − 2,5, czyli ucho leży symetrycznie względem y = 0).
 * Wzór ze zdjęcia: `renifer_kregiel.py` (parametry = suwaki podglądu; `export_line_json.py` eksportuje je do `line.json`, podgląd czyta stamtąd). Buduje `renifer_kregiel_calosc.stl` (poroże i uszy przytopione),
   `renifer_kregiel_korpus.stl` + `renifer_kregiel_poroze_{prawe,lewe}.stl` (poroże wymienne na czopie 5×5×8) i uruchamia `verify_set` (14 kontroli) na **nagim** korpusie bez uszu-liści:
   koperta modelu to bryła obrotowa, więc ucho-liść (element przytopiony) jest poza nią z definicji. Kontrola w `verify_all.py` (sekcja 10).
-* Odchylenie: wysokość całości 161,8 mm (nie 150): wymiary ze zdjęcia; przycisk „Dopasuj do 150 mm” w podglądzie skaluje poroże (`antS`).
-* Nowe parametry mają testy zgodności JS ↔ Python (`test_artifact.py`): profil dla 5 wariantów (szyja, brzuch, głowa elipsoidalna), porty, ramki z pochyleniem, pola części płaskich (poroże 1/2/3/5 poziomów, lustro, ucho-liść;
-  rasteryzacja JS i PIL różni się do ~0,4 mm na zaokrąglonych złączach, więc tolerancja jest 2D ≤ 0,45 mm i zero punktów po przeciwnych stronach powierzchni z zapasem), a `--print` eksportuje 5 skrajnych wariantów
-  (głowa wysoko, poroże 5 poziomów z kątami, wymienne, nisko, szeroki) i puszcza je przez `verify_print.py`.
+* Odchylenie: wysokość całości ok. 162 mm (nie 150): wymiary ze zdjęcia; przycisk „Dopasuj do 150 mm” w podglądzie skaluje poroże (`antS`).
+* Nowe parametry mają testy zgodności JS ↔ Python (`test_artifact.py`): profil dla 6 wariantów (sylwetka kręgla, głowa wysoko, pełny brzuch, głowa elipsoidalna, wąska talia oraz dawna p-norma z szyją), porty, ramki z pochyleniem, pola części płaskich (poroże 1/2/3/5 poziomów, lustro, ucho-liść;
+  rasteryzacja JS i PIL różni się do ~0,4 mm na zaokrąglonych złączach, więc tolerancja jest 2D ≤ 0,45 mm i zero punktów po przeciwnych stronach powierzchni z zapasem), a `--print` eksportuje 6 skrajnych wariantów
+  (głowa wysoko, poroże 5 poziomów z kątami, wymienne, nisko, szeroki, wąska talia) i puszcza je przez `verify_print.py`.
 
 ## 10. Pliki
 

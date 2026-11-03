@@ -8,7 +8,7 @@ const a = html.indexOf('/*CORE_START*/'), b = html.indexOf('/*CORE_END*/');
 if (a < 0 || b < 0) throw new Error('brak znacznikow CORE');
 const ctx = {Math, console, Float32Array, Float64Array, Int32Array, Uint32Array, Uint8Array, ArrayBuffer, DataView, Map, Set, Object, Array, JSON, Number, String, Promise, setTimeout, Buffer};
 vm.createContext(ctx);
-vm.runInContext(html.slice(a, b) + `;this.X={M,ORDER,defaults,bunDef,eggDef,buildModel,finalize,mountFrame,mkGrid,fillBun,lineGrid,fileNames,triCount,LINE,D2R,exportGroups,stlBytes,meshCheck,manifoldGrid,surfaceNets};`, ctx);
+vm.runInContext(html.slice(a, b) + `;this.X={M,ORDER,defaults,bunDef,eggDef,buildModel,finalize,mountFrame,mkGrid,fillBun,lineGrid,fileNames,triCount,LINE,D2R,exportGroups,stlBytes,meshCheck,manifoldGrid,surfaceNets,earSpec};`, ctx);
 const X = ctx.X;
 const out = {};
 const b64 = F => Buffer.from(F.buffer, F.byteOffset, F.byteLength).toString('base64');
@@ -23,6 +23,32 @@ const gridOut = G => ({x0: G.x0, y0: G.y0, z0: G.z0, v: G.v, nx: G.nx, ny: G.ny,
   const G = X.mkGrid(-24, 24, -24, 24, -1, 125, 1.0);
   X.fillBun(G, B);
   out.grid_krolik = gridOut(G);
+}
+// --- renifer kregiel: profil (szyja, brzuch gora/dol, glowa elipsoidalna), porty, ramki z pochyleniem przod/tyl, czesci plaskie (poroze N poziomow, uszy-liscie)
+{
+  const V = {kregiel: {}, glowa_wysoko: {headZ: 128, neckR: 9}, brzuch: {bellyDz: -10, bodyN: 2, bodyNu: 3.2, bodyHz: 50, bodyW: 42},
+             glowa_elips: {headK: 1.4, headR: 14, headZ: 96, blend: 14}, bez_szyi: {neckR: 0, headZ: 90, blend: 20}};
+  const zs = []; for (let z = 0; z <= 150; z += 0.37) zs.push(z);
+  out.kreg = {zs, var: {}};
+  for (const k in V) {
+    const P = Object.assign(X.defaults('renifer_kregiel'), V[k], k === 'kregiel' ? {} : {earPitch: -12, earTilt: 22, leafAng: 70, leafPos: 48}), B = X.bunDef(P);
+    const tilt = P.earTilt * X.D2R, pitch = P.earPitch * X.D2R, ph = P.leafPos * X.D2R, la = P.leafAng * X.D2R;
+    out.kreg.var[k] = {P: V[k], full: P, prof: zs.map(B.prof), top: B.top, P0: [B.P0(1), B.P0(-1)],
+      ant: [X.mountFrame(1, B.P0(1), tilt, pitch), X.mountFrame(-1, B.P0(-1), tilt, pitch)],
+      leaf: [X.mountFrame(1, B.leafPort(1, ph, P.leafT), la, 0), X.mountFrame(-1, B.leafPort(-1, ph, P.leafT), la, 0)],
+      sdf: [[0, 0, B.HC + B.HR * B.K + 0.7], [B.HR + 2, 0, B.HC], [3, 5, B.HC - B.HR * B.K - 1], [0, 0, B.HC]].map(p => [p, B.sdf(...p)])};
+  }
+  // czesci plaskie: pole F na siatce punktow (a, b, c) dla roznych poroz i liscia
+  const pts = []; for (let a = -12; a <= 24; a += 0.6) for (let b = -5; b <= 80; b += 0.6) for (const c of [0.4, 1.5, 2.6, 4.0]) pts.push([a, b, c]);
+  out.kreg.flat = {pts, parts: {}};
+  const A0 = Object.assign(X.defaults('renifer_kregiel'), {});
+  const FV = {ant_def: ['ant', {antLv: 2, antSp: 13, antTine: 1, antAng: 38.121, antS: 1, antW: 1}, false],
+              ant3: ['ant', {}, false], ant5: ['ant', {antLv: 5, antSp: 10, antTine: 1.3, antAng: 50, antS: 1.2, antW: 1.3}, true],
+              ant1: ['ant', {antLv: 1, antTine: .7, antAng: 20, antS: .8}, false], leaf: ['leaf', {leafL: 22, leafW: 11, leafT: 4}, false]};
+  for (const k in FV) {
+    const [kind, o, mir] = FV[k], P = Object.assign({}, A0, o), sp = X.earSpec(kind, P, 0.1), fp = sp.mk(mir);
+    out.kreg.flat.parts[k] = {kind, P: o, mirror: mir, L: sp.L, T: sp.T, ar: sp.ar(1), F: pts.map(p => fp.F(p[0], p[1], p[2]))};
+  }
 }
 // --- jajko
 {
@@ -84,6 +110,14 @@ if (stlDir) {
   for (const id of ids) {
     const gs = X.exportGroups(X.buildModel(id, X.defaults(id), {vox: 0.5}));
     for (const g of gs) { const f = (gs.length > 1 ? id + '_' + g.g : id) + '.stl'; fs.writeFileSync(path.join(stlDir, f), X.stlBytes(g.parts)); out.stl.push(f); }
+  }
+  if (process.argv[5] === 'all') {   // skrajne ustawienia suwakow renifera kregla: kazde musi dac szczelna siatke
+    const VAR = {rk_glowa_wysoko: {headZ: 128, neckR: 9}, rk_poroze5: {antLv: 5, antSp: 10, antTine: 1.3, antAng: 50, earPitch: 18, earTilt: 24, antS: 1.1},
+                 rk_wymienne: {detach: 1, earPitch: -10}, rk_nisko: {headZ: 92, bellyDz: -34, bodyNu: 1.3, leafAng: 80, antLv: 1}, rk_szeroki: {bodyW: 56, headR: 22, headK: 1.4, bodyHz: 72}};
+    for (const k in VAR) {
+      const gs = X.exportGroups(X.buildModel('renifer_kregiel', Object.assign(X.defaults('renifer_kregiel'), VAR[k]), {vox: 0.5}));
+      for (const g of gs) { const f = (gs.length > 1 ? k + '_' + g.g : k) + '.stl'; fs.writeFileSync(path.join(stlDir, f), X.stlBytes(g.parts)); out.stl.push(f); }
+    }
   }
 }
 process.stdout.write(JSON.stringify(out));

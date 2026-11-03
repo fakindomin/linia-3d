@@ -12,8 +12,9 @@ ogonek, nos, miotła) na czopach 5×5×8 pasują do obu stylów.
 pip install -r requirements.txt
 python3 new_model_template.py     # demo „gruszka” w obu stylach + kontrola (31 PASS), pliki w out_demo/
 python3 build_std_lowpoly.py      # 19 plików lp_*.stl (kilka sekund)
+python3 renifer_kregiel.py        # renifer „kręgiel”: całość, korpus z gniazdami, poroże wymienne + verify_set (ok. 30 s)
 ./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
-python3 verify_all.py             # 210 kontroli standardu na gotowych plikach out/*.stl
+python3 verify_all.py             # 216 kontroli standardu na gotowych plikach out/*.stl
 python3 verify_print.py out/      # szczelność i poprawność druku każdego STL (dziury, zdegenerowane, samoprzecięcia, ścianki; ok. 2 min)
 python3 export_line_json.py       # line.json: stałe, profile i porty dla artefaktu „Żebrowana kolekcja”
 python3 build_artifact.py         # składa stronę podglądu (artifact/zebrowana_kolekcja.page.html) z line.json
@@ -29,6 +30,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `lib.py`, `parts.py`, `shapes.py` | rdzeń stylu żebrowanego (siatka voxelowa + marching cubes, części płaskie, uchwyty) |
 | `lp.py`, `lp_parts.py` | rdzeń lowpoly (pierścienie, boolean przez manifold3d, liść, poroże) |
 | `build_*.py`, `ears_A.py` | skrypty budujące STL (kolejność w `build_all.sh`) |
+| `renifer_kregiel.py` | renifer z parametrami wzoru (szyja, brzuch, głowa, poroże N poziomów, uszy-liście); parametry = suwaki podglądu |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |
 | `meshclean.py`, `clean_stl.py` | usuwanie mikro-trójkątów bez otwierania siatki (wpięte w `lib.save`); `clean_stl.py` czyści istniejące pliki |

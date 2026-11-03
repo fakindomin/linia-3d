@@ -2,7 +2,7 @@
  python3 verify_all.py          -> tabela PASS/FAIL, raport out/_verify_report.json, kod wyjscia 1 przy bledzie
 Sprawdza: (1) stale i luz czop-gniazdo 4 pary, (2) nazwy, (3) siatki (szczelnosc, 1 skladowa, nawis), (4) korpus miesci sie w kopercie,
 (5) odleglosc P0-powierzchnia (porty z idealnego profilu), (6) MACIERZ PASOWANIA czesc x korpus (zebra i lowpoly, kazdy z kazdym) - interferencja
-i luz, (7) wysokosc figurek 150 mm, zgodnosc wymiarow zebra/lowpoly, (8) zebra: rozstaw/amplituda (FFT), (9) lowpoly: reguly M i pierscieni."""
+i luz, (7) wysokosc figurek 150 mm, zgodnosc wymiarow zebra/lowpoly, (8) zebra: rozstaw/amplituda (FFT), (9) lowpoly: reguly M i pierscieni, (10) renifer kregiel: pliki, siatki, verify_set."""
 import sys, os, re, json, glob
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from models import *
@@ -221,6 +221,23 @@ Vid = lambda model: 2 * math.pi * sg.Polygon(model.outline).centroid.x * sg.Poly
 for nm, solid, model in (("krolik", SOL["bunny"], BUNNY), ("balwan", SOL["snow"], SNOWMAN), ("jajko", SOL["egg_full"], EGG)):
     r = solid.volume / Vid(model)
     check(f"objetosc lowpoly/idealna {nm}: {r:.3f} (0,95..1,03)", 0.95 <= r <= 1.03)
+
+# ------------------------------------------------------------------ 10. renifer kregiel (model z parametrami wzoru, tylko styl zebrowany)
+print("== 10. renifer kregiel: pliki, siatki i verify_set (koperta, pasowanie poroza, zebra) ==")
+import renifer_kregiel as RK
+RKF = ["renifer_kregiel_calosc", "renifer_kregiel_korpus", "renifer_kregiel_poroze_prawe", "renifer_kregiel_poroze_lewe"]
+miss = [f for f in RKF if not os.path.exists(os.path.join(OUT, f + ".stl"))]
+check("renifer kregiel: komplet plikow (calosc, korpus, poroze x2)", not miss, miss)
+if not miss:
+    for n in RKF:
+        m_ = L(n + ".stl")
+        r = mesh_report(m_, "poroze" not in n, list(RK.make_model().ports.values()) if n.endswith("korpus") else [], noise_frac=0.01)
+        ok = r["watertight"] and r["winding"] and r["components"] == 1 and r["volume"] > 0 and abs(r["zmin"]) < 0.05
+        if "overhang" in r:
+            ok = ok and r["overhang"]["ok"]
+        check(f"siatka {n}", ok, f"{r['ext']} tri {r['tris']}" + (f" nawis {r['overhang']['steep_mm2']} mm2" if "overhang" in r else ""))
+    npass, bad_ = RK.verify_standard(log=lambda *a, **k: None)
+    check(f"renifer kregiel: verify_set ({npass} kontroli: koperta, pasowanie czop/gniazdo, zebra N)", not bad_, bad_)
 
 # ------------------------------------------------------------------ kontrola druku: tester testera (pelna kontrola plikow: python verify_print.py)
 import verify_print as _VP

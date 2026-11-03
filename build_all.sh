@@ -12,6 +12,7 @@ python3 ears_A.py                   # ucho_{mis,kot,lis,sowa}_{prawe,lewe}
 # --- grupy A/B (figurki, czapki, naczynia, ozdoby): sufity wnek 52 st. (LP_SLOPE), czyszczenie siatek w lib.save
 python3 build_A_czapki.py           # czapka_krasnal/mikolaj (na glowe korpusu), jajko_czapka_krasnal/mikolaj
 python3 build_A_fused.py mis kot lis sowa pisklo   # mis/kot/lis/sowa_calosc, jajko_czapka_pisklo
+python3 renifer_kregiel.py         # renifer_kregiel_calosc / _korpus / _poroze_{prawe,lewe} (parametry wzoru, verify_set)
 python3 build_aniol.py              # aniol_calosc (skrzydla z pior; build_A_fused.py ma starsza wersje - nie uruchamiac z 'aniol')
 python3 build_A_duszek.py           # duszek
 python3 build_B_matrioszki.py       # jajko_M_*, jajko_S_*

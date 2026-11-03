@@ -453,10 +453,18 @@ function rboxF(a,b,c,lo,hi,rad){
 }
 const socketF=(a,b,c)=>rboxF(a,b,c,[-SOCK_W/2,-SOCK_D,2.5-SOCK_W/2],[SOCK_W/2,1.5,2.5+SOCK_W/2],SOCK_R);
 const pegExtF=(a,b,c)=>rboxF(a,b,c,[-PEG_W/2,-PEG_L,0],[PEG_W/2,2,PEG_W],PEG_R);
-function mountFrame(side,P0,tilt){
-  const s=Math.sin(tilt),c=Math.cos(tilt),B=[side*s,0,c],C=[0,-1,0];
+function mountFrame(side,P0,tilt,pitch){
+  const s=Math.sin(tilt),c=Math.cos(tilt);let B=[side*s,0,c],C=[0,-1,0];
+  if(pitch){const sp=Math.sin(pitch),cp=Math.cos(pitch);   /* pochylenie do przodu (pitch>0) / tyłu: obrót wokół osi a */
+    const B2=[B[0]*cp+C[0]*sp,B[1]*cp+C[1]*sp,B[2]*cp+C[2]*sp],C2=[C[0]*cp-B[0]*sp,C[1]*cp-B[1]*sp,C[2]*cp-B[2]*sp];B=B2;C=C2;}
   const A=[B[1]*C[2]-B[2]*C[1],B[2]*C[0]-B[0]*C[2],B[0]*C[1]-B[1]*C[0]];
   return mkFrame([P0[0]-2.5*C[0],P0[1]-2.5*C[1],P0[2]-2.5*C[2]],A,B,C);
+}
+/* globalny prostokąt (bounding box) lokalnego pudełka (a,b,c) w ramce fr: do doboru siatki obliczeń */
+function frameBox(fr,ar,br,cr){
+  const lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9];
+  for(const a of ar)for(const b of br)for(const c of cr)for(let d=0;d<3;d++){const v=fr.O[d]+a*fr.A[d]+b*fr.B[d]+c*fr.C[d];if(v<lo[d])lo[d]=v;if(v>hi[d])hi[d]=v;}
+  return{lo,hi};
 }
 const frameXf=(fr,m)=>xf(m,(a,b,c)=>[fr.O[0]+a*fr.A[0]+b*fr.B[0]+c*fr.C[0],fr.O[1]+a*fr.A[1]+b*fr.B[1]+c*fr.C[1],fr.O[2]+a*fr.A[2]+b*fr.B[2]+c*fr.C[2]]);
 function partFn(fp,plateB0,trims,peg,cmax){
@@ -474,18 +482,30 @@ function partFn(fp,plateB0,trims,peg,cmax){
 const nRibs=r=>Math.round(2*Math.PI*r/3.4);
 const IDM={O:[0,0,0],A:[1,0,0],B:[0,1,0],C:[0,0,1]};
 function bunDef(P){
-  const B={R:P.bodyW/2,HZ:P.bodyHz,N:P.bodyN,HR:P.headR,HC:P.headZ,SP:P.blend,amp:P.ribDepth/2,pw:P.ribPow,n:Math.round(P.ribs)};
-  B.ZC=0.8*B.HZ;
+  /* korpus = trzy człony p-normy: brzuch (nadelipsoida; dół i góra z osobnymi wykładnikami), głowa (elipsoida) i szyja (walec) */
+  const B={R:P.bodyW/2,HZ:P.bodyHz,N:P.bodyN,NU:P.bodyNu||P.bodyN,HR:P.headR,K:P.headK||1,HC:P.headZ,SP:P.blend,amp:P.ribDepth/2,pw:P.ribPow,n:Math.round(P.ribs)};
+  B.ZC=0.8*B.HZ+(P.bellyDz||0);
+  B.NR=Math.min(P.neckR||0,0.95*B.HR);
   B.prof=z=>{
-    const u=(z-B.ZC)/B.HZ,ub=Math.min(Math.abs(u),1);
-    const rb=Math.abs(u)<=1?B.R*Math.pow(Math.max(1-Math.pow(ub,B.N),0),1/B.N):0;
-    const v=clamp((z-B.HC)/B.HR,-1,1),rh=B.HR*Math.sqrt(Math.max(1-v*v,0));
-    return Math.pow(Math.pow(rb,B.SP)+Math.pow(rh,B.SP),1/B.SP);
+    const u=(z-B.ZC)/B.HZ,ub=Math.min(Math.abs(u),1),N=u<0?B.N:B.NU;
+    const rb=Math.abs(u)<=1?B.R*Math.pow(Math.max(1-Math.pow(ub,N),0),1/N):0;
+    const v=clamp((z-B.HC)/(B.HR*B.K),-1,1),rh=B.HR*Math.sqrt(Math.max(1-v*v,0));
+    const rn=(B.NR>0&&z>=B.ZC&&z<=B.HC)?B.NR:0;
+    return Math.pow(Math.pow(rb,B.SP)+Math.pow(rh,B.SP)+Math.pow(rn,B.SP),1/B.SP);
   };
   const r0=Math.hypot(P.earX,Y0);
-  B.P0=side=>[side*P.earX,Y0,B.HC+Math.sqrt(Math.max(B.HR*B.HR-r0*r0,0))];
-  B.sdf=(x,y,z)=>B.HR+0.3-Math.sqrt(x*x+y*y+(z-B.HC)*(z-B.HC));
-  B.top=B.HC+B.HR;
+  B.P0=side=>[side*P.earX,Y0,B.HC+B.K*Math.sqrt(Math.max(B.HR*B.HR-r0*r0,0))];
+  /* odległość do głowy (z luzem GAP): dla kuli dokładna, dla elipsoidy przybliżenie pierwszego rzędu */
+  B.sdf=(x,y,z)=>{
+    const dz=z-B.HC;
+    if(B.K===1)return B.HR+0.3-Math.sqrt(x*x+y*y+dz*dz);
+    const a=B.HR,c=B.HR*B.K,q=Math.sqrt((x*x+y*y)/(a*a)+dz*dz/(c*c));
+    if(q<1e-6)return a+0.3;
+    return(1-q)*q/Math.sqrt((x*x+y*y)/(a*a*a*a)+dz*dz/(c*c*c*c))+0.3;
+  };
+  B.top=B.HC+B.HR*B.K;
+  /* punkt na powierzchni głowy (kąt od pionu ph) dla bocznego ucha-liścia */
+  B.leafPort=(side,ph,T)=>[side*B.HR*Math.sin(ph),T/2-2.5,B.HC+B.HR*B.K*Math.cos(ph)];
   return B;
 }
 function fillBun(G,B){latheField(G,{R:B.prof,N:B.n,amp:B.amp,pow:B.pw});planeZ(G,0,1e9);}
@@ -501,6 +521,13 @@ function earSpec(kind,P,res0){
     return{L,T,ar:()=>[-A,A],mk:()=>{const cv=new Canvas(-A,A,-4.5,L+2,res);cv.poly(polyLR(b=>-hw(b),hw,bs));
       const ring=new Canvas(-A,A,-4.5,L+2,res);ring.ellipse(0,0.55*L,3.5*k,0.34*L,1);ring.ellipse(0,0.55*L,2.6*k,Math.max(0.34*L-0.9,0.1),0);
       return new FlatPart(cv,T,{w:1,k:1.5,ring:ring.m,ringH:P.ringH});}};
+  }
+  if(kind==='leaf'){
+    /* boczne ucho-liść renifera: ostry czubek, bez owalu; L = leafL, W = leafW, grubość = leafT */
+    const L=P.leafL,hm=P.leafW/2,hb=0.55*hm,A=hm+2,T2=P.leafT,q=1.2;
+    const hw=b=>{const u=b/L;if(u<0.4)return hb+(hm-hb)*Math.sin(Math.PI/2*Math.max(u,0)/0.4);const t=(u-0.4)/0.6;return hm*Math.pow(Math.max(1-Math.pow(t,q),0),1/q);};
+    return{L,T:T2,ar:()=>[-A,A],mk:()=>{const cv=new Canvas(-A,A,-4.5,L+2,res);cv.poly(polyLR(b=>-hw(b),hw,linsp(-3,L,200)));
+      return new FlatPart(cv,T2,{w:0.8,k:1.2});}};
   }
   if(kind==='tri'){
     const L=P.earL,hw0=P.earW/2,lean=P.earLean,q=P.earQ,openR=P.earOpen,ringIn=P.ringIn,ringTop=P.ringTop;
@@ -529,14 +556,20 @@ function earSpec(kind,P,res0){
       return new FlatPart(cv,T,{w:1,k:1.5,groove:gr.m,grooveD:0.7,mirror});}};
   }
   if(kind==='ant'){
-    const s=P.antS,wm=P.antW,A0=-8*s-2,A1=20*s+2,Lc=36*s;
+    /* poroże: gałąź główna + antLv odnóg co antSp mm (pierwsza w b=5), każda odchylona o antAng od osi gałęzi, długości 12,965*antTine.
+       Dla antLv=2, antSp=13, antTine=1, antAng=38,12 to dokładnie dawne poroże (po 2 odnogi). */
+    const s=P.antS,wm=P.antW,nL=Math.max(1,Math.round(P.antLv||2)),sp=P.antSp||13,tl=P.antTine||1,ang=(P.antAng||38.121)*D2R;
+    const Lt=Math.hypot(8,10.2)*tl,dx=Lt*Math.sin(ang),dy=Lt*Math.cos(ang),last=5+(nL-1)*sp;
+    const A0=-8*s-2,A1=Math.max(20,0.5+dx+4)*s+2,Lc=Math.max(36,Math.max(last+10.6,last+dy)+7.4)*s,AR=Math.max(21,22*s,(0.5+dx+5)*s);
     const sc=p=>[p[0]*s,p[1]*s];
-    return{L:Lc,T,ar:sd=>sd>0?[-10,Math.max(21,22*s)]:[-Math.max(21,22*s),10],mk:mirror=>{
+    const g=b=>b<=18?-3+(b+3)*(last+3)/21:last+(b-18);              /* rozciągnięcie trzonu; korona (b>18) zostaje bez zmian */
+    const beam=[[0,-3],[0.3,4],[0.4,12],[0,20],[-0.8,26.5],[-1.2,28.6]].map(p=>[p[0],g(p[1])]);
+    return{L:Lc,T,ar:sd=>sd>0?[-10,AR]:[-AR,10],mk:mirror=>{
       const cv=new Canvas(A0,A1,-4.5,Lc+2,res);
-      cv.path([[0,-3],[0.3,4],[0.4,12],[0,20],[-0.8,26.5],[-1.2,28.6]].map(sc),4.2*wm,1);
+      cv.path(beam.map(sc),4.2*wm,1);
       cv.rect(-3.4*s,3.4*s,-3*s,4*s,1);
-      cv.path([[0.5,5],[4.5,10.1],[8.5,15.2]].map(sc),3.7*wm,1);
-      cv.path([[0.3,18],[4.3,23.1],[8.3,28.2]].map(sc),3.7*wm,1);
+      for(let i=0;i<nL;i++){const a=0.5-0.2*i,b=5+i*sp;
+        cv.path([[a,b],[a+dx/2,b+dy/2],[a+dx,b+dy]].map(sc),3.7*wm,1);}
       cv.closeR(2.0);cv.openR(1.2);
       return new FlatPart(cv,T,{w:1,k:2.2,mirror});}};
   }
@@ -564,7 +597,7 @@ function addEarParts(parts,spec,frameFn,sdfs,vox,explode,name){
     const e=earPart(spec,side,frameFn,sdfs,vox),ex=toPage({p:e.m.p.slice(),i:e.m.i.slice()});
     const g=frameXf(e.fr,{p:e.m.p,i:e.m.i});toPage(g);
     if(explode){const B=e.fr.B,k=explode*0.5;translate(g,B[0]*k,B[2]*k,-B[1]*k);}
-    parts.push({name:name+(side>0?' P':' L'),m:g,ex,g:'ucho_'+(side>0?'prawe':'lewe')});
+    parts.push({name:name+(side>0?' P':' L'),m:g,ex,g:(name==='poroże'?'poroze_':'ucho_')+(side>0?'prawe':'lewe')});
   }
 }
 
@@ -691,10 +724,22 @@ function buildReal(id,P,opt){
   if(F.kind==='ghost')return buildGhost(P,vox,parts,warn);
   if(F.kind==='egg')return buildEgg(id,P,vox,ex,parts,warn,opt);
   /* figurka na korpusie bazowym */
-  const B=bunDef(P),tilt=P.earTilt*D2R,frameFn=side=>mountFrame(side,B.P0(side),tilt);
+  const B=bunDef(P),tilt=P.earTilt*D2R,pitch=(P.earPitch||0)*D2R,frameFn=side=>mountFrame(side,B.P0(side),tilt,pitch);
   const cres=opt.lo||opt.draft?0.2:0.1;let spec=F.ears?earSpec(F.ears,P,cres):null,xh=Math.max(21,B.R+2.5),ylo=-xh,yhi=xh,zhi=B.P0(1)[2]+6;
-  if(spec)zhi=Math.max(zhi,B.P0(1)[2]+spec.L*Math.cos(tilt)+6);
+  if(spec)zhi=Math.max(zhi,B.P0(1)[2]+spec.L*Math.cos(tilt)*Math.cos(pitch)+6);
   if(F.ears==='ant')xh=Math.max(28,B.P0(1)[0]+spec.ar(1)[1]*Math.cos(tilt)+3);
+  const grow=(fr,sp,sd)=>{const q=frameBox(fr,sp.ar(sd),[-9,sp.L+3],[-1,8]);
+    xh=Math.max(xh,-q.lo[0]+2,q.hi[0]+2);ylo=Math.min(ylo,q.lo[1]-2);yhi=Math.max(yhi,q.hi[1]+2);zhi=Math.max(zhi,q.hi[2]+2);};
+  if(spec)for(const sd of[1,-1])grow(frameFn(sd),spec,sd);
+  /* boczne uszy-liście (renifer kręgiel): przytopione do głowy, własny kąt i położenie */
+  let leaf=null;
+  if(F.leaf){
+    const la=P.leafAng*D2R,ph=P.leafPos*D2R;
+    leaf={spec:earSpec('leaf',P,cres),fr:side=>mountFrame(side,B.leafPort(side,ph,P.leafT),la,0)};
+    for(const sd of[1,-1])grow(leaf.fr(sd),leaf.spec,sd);
+  }
+  /* kontrola ciągłości: głowa nie może wisieć w powietrzu */
+  for(let z=2;z<B.top-2;z+=0.5){if(B.prof(z)<2.5){warn.push('Głowa jest oderwana od korpusu (przerwa na wysokości '+Math.round(z)+' mm). Zwiększ szyję albo obniż głowę.');break;}}
   if(F.tail){yhi=Math.max(yhi,12+P.tailL*Math.sin(P.tailA*D2R)+P.tailR+3);zhi=Math.max(zhi,14+P.tailL*Math.cos(P.tailA*D2R)+P.tailR+3);}
   if(F.wings){const s=P.wingS,ca=Math.cos(P.wingA*D2R),sa=Math.sin(P.wingA*D2R);xh=Math.max(xh,(19+31*s)*ca+Math.abs(P.wingC)*sa+6);yhi=Math.max(yhi,(19+31*s)*sa+Math.abs(P.wingC)*ca+6);zhi=Math.max(zhi,P.wingZ+71+43*s+4,P.haloZ+P.haloRo+3);}
   if(F.hat)zhi=B.top+4;
@@ -702,6 +747,7 @@ function buildReal(id,P,opt){
   fillBun(G,B);
   const detach=!!P.detach&&spec&&!F.wings;
   if(spec){if(detach)cutSockets(G,frameFn);else fuseEars(G,B,spec,P,frameFn);}
+  if(leaf)fuseEars(G,B,leaf.spec,P,leaf.fr);
   if(F.tail){const tf=tailF(P,P.ribPow);boxField(G,[-12,12,0,yhi,0,zhi],tf);}
   if(F.eyes){for(const sx of[1,-1])boxField(G,[-(B.HR+3),B.HR+3,-(B.HR+4),0,B.HC-B.HR,B.HC+B.HR],eyeCapF(B,P,sx));
     boxField(G,[-6,6,-(B.HR+P.beakL+2),-(B.HR-6),B.HC-4.2-5,B.HC-4.2+5],beakF(B.HC-4.2,B.HR-0.1,P.beakL,P.beakW,3.0,4.0));}
@@ -802,21 +848,25 @@ function buildEgg(id,P,vox,ex,parts,warn,opt0){
 
 /* ===== definicje modeli ===== */
 const RIBS={ribs:36,ribDepth:1.6,ribPow:.8};
-const BUN={bodyW:38,bodyHz:52,bodyN:2.5,headR:16,headZ:105,blend:20,earTilt:14,earX:6,earT:5.5,ringH:.7,detach:0,explode:0};
+const BUN={bodyW:38,bodyHz:52,bodyN:2.5,bodyNu:2.5,bellyDz:0,neckR:0,headK:1,headR:16,headZ:105,blend:20,earTilt:14,earPitch:0,earX:6,earT:5.5,ringH:.7,detach:0,explode:0};
+const ANT={antS:1,antW:1,antLv:2,antSp:13,antTine:1,antAng:38.121};
+const KREG={bodyW:49,bodyHz:60,bellyDz:-26,bodyN:3,bodyNu:1.7,headR:17.5,headK:1.2,headZ:100,neckR:10.2,blend:9,ribs:44,earT:5,earX:8,earTilt:14,earPitch:0,antW:1.15,antLv:3,leafL:17,leafW:8.5,leafT:3.4,leafAng:55,leafPos:60};
 const EGG_REF={W:56,H:89.5,NL:2.2,NU:1.9};   /* powłoka odniesienia wnętrza: domyślny kształt jajka (wspólna dla wszystkich wariantów obrysu) */
 const EGGD={eggW:56,eggH:89.5,eggZ:34,eggNL:2.2,eggNU:1.9,seam:34,cavR:24,floor:4.5,lipH:7,wallCup:3.3,ceilZ:76,ribs:48,ribDepth:1.6,ribPow:.8,explode:30,earTilt:14,earX:6,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0};
 const BASE={height:100,width:70,egg:.12,full:1,flat:.06,ribs:36,ribDepth:1.6,ribShape:1,explode:0};
 const bun=(o)=>Object.assign({},RIBS,BUN,o);
 const M={
-  krolik:{n:'Królik',desc:'Korpus z główką i smukłe liściaste uszy. Wymiary z linii: całość 150 mm.',tune:'earL',f:{real:1,ears:'rab'},g:['bun','rib','mount','earRab'],d:bun({earL:30.9,earW:14})},
-  kot:{n:'Kot',desc:'Ten sam korpus, trójkątne uszy z owalem.',tune:'earL',f:{real:1,ears:'tri'},g:['bun','rib','mount','earTri'],d:bun({earL:22,earW:10.8,earLean:1.2,earQ:1,earOpen:1.3,ringIn:2.2,ringTop:.72})},
-  lis:{n:'Lis',desc:'Wysokie uszy i puszysty żebrowany ogon.',tune:'earL',f:{real:1,ears:'tri',tail:1},g:['bun','rib','mount','earTri','tail'],d:bun({earL:30,earW:10,earLean:1.8,earQ:1.15,earOpen:.8,ringIn:2,ringTop:.7,tailL:44,tailR:7.8,tailA:46,tailN:16})},
-  mis:{n:'Miś',desc:'Okrągłe uszka na szyjkach.',f:{real:1,ears:'round'},g:['bun','rib','mount','earRound'],d:bun({earR:6,earBc:3.6})},
-  sowa:{n:'Sowa',desc:'Kępki piór z rysami, oczy i krótki dziób.',tune:'earL',f:{real:1,ears:'tuft',eyes:1},g:['bun','rib','mount','earTuft','eyes','beakS'],d:bun({earL:16,earW:9.6,earLean:7,eyeS:.37,eyeX:6.3,beakL:4.2,beakW:3.2})},
-  renifer:{n:'Renifer',desc:'Ten sam korpus i poroże z dwiema odnogami.',tune:'antS',f:{real:1,ears:'ant'},g:['bun','rib','mount','ant'],d:bun({earT:5,antS:1,antW:1})},
-  aniol:{n:'Anioł',desc:'Aureola na wsporniku i dwa skrzydła z rysami piór.',tune:'haloZ',f:{real:1,wings:1},g:['bun','rib','halo','wing'],d:bun({haloZ:139,haloRo:10.5,haloRi:6.8,haloT:3.6,wingS:1,wingA:17.7,wingZ:0,wingC:-7.2,wingT:3.1})},
-  krasnal:{n:'Krasnal',desc:'Korpus i wymienna żebrowana czapka na głowę (dwa pliki).',tune:'hatTop',f:{real:1,hat:'krasnal'},g:['bun','rib','hatB','mountX'],d:bun({hatTop:150,hatRb:19.7,hatP:1.1,cuffH:8,pomR:5.8})},
-  mikolaj:{n:'Mikołaj',desc:'Korpus i czapka z mankietem i pomponem (dwa pliki).',tune:'hatTop',f:{real:1,hat:'mikolaj'},g:['bun','rib','hatB','cuff','mountX'],d:bun({hatTop:150,hatRb:20.5,hatP:1.1,cuffH:8,pomR:5.8})},
+  krolik:{n:'Królik',desc:'Korpus z główką i smukłe liściaste uszy. Wymiary z linii: całość 150 mm.',tune:'earL',f:{real:1,ears:'rab'},g:['bun','belly','rib','mount','earRab'],d:bun({earL:30.9,earW:14})},
+  kot:{n:'Kot',desc:'Ten sam korpus, trójkątne uszy z owalem.',tune:'earL',f:{real:1,ears:'tri'},g:['bun','belly','rib','mount','earTri'],d:bun({earL:22,earW:10.8,earLean:1.2,earQ:1,earOpen:1.3,ringIn:2.2,ringTop:.72})},
+  lis:{n:'Lis',desc:'Wysokie uszy i puszysty żebrowany ogon.',tune:'earL',f:{real:1,ears:'tri',tail:1},g:['bun','belly','rib','mount','earTri','tail'],d:bun({earL:30,earW:10,earLean:1.8,earQ:1.15,earOpen:.8,ringIn:2,ringTop:.7,tailL:44,tailR:7.8,tailA:46,tailN:16})},
+  mis:{n:'Miś',desc:'Okrągłe uszka na szyjkach.',f:{real:1,ears:'round'},g:['bun','belly','rib','mount','earRound'],d:bun({earR:6,earBc:3.6})},
+  sowa:{n:'Sowa',desc:'Kępki piór z rysami, oczy i krótki dziób.',tune:'earL',f:{real:1,ears:'tuft',eyes:1},g:['bun','belly','rib','mount','earTuft','eyes','beakS'],d:bun({earL:16,earW:9.6,earLean:7,eyeS:.37,eyeX:6.3,beakL:4.2,beakW:3.2})},
+  renifer:{n:'Renifer',desc:'Ten sam korpus i poroże. Liczbę poziomów, odstęp, kąt odnóg i kąt całego poroża ustawiasz suwakami.',tune:'antS',f:{real:1,ears:'ant'},g:['bun','belly','rib','mountR','ant'],d:bun(Object.assign({earT:5},ANT))},
+  renifer_kregiel:{n:'Renifer – kręgiel',desc:'Smukły korpus w kształcie kręgla z szyją, jajowata głowa, poroże o trzech poziomach i boczne uszy-liście. Głowę podnosisz i opuszczasz suwakiem wysokości, szyja rośnie razem z nią.',tune:'antS',f:{real:1,ears:'ant',leaf:1},g:['bun','belly','head','rib','mountR','ant','leaf'],
+    d:bun(Object.assign({},ANT,KREG))},
+  aniol:{n:'Anioł',desc:'Aureola na wsporniku i dwa skrzydła z rysami piór.',tune:'haloZ',f:{real:1,wings:1},g:['bun','belly','rib','halo','wing'],d:bun({haloZ:139,haloRo:10.5,haloRi:6.8,haloT:3.6,wingS:1,wingA:17.7,wingZ:0,wingC:-7.2,wingT:3.1})},
+  krasnal:{n:'Krasnal',desc:'Korpus i wymienna żebrowana czapka na głowę (dwa pliki).',tune:'hatTop',f:{real:1,hat:'krasnal'},g:['bun','belly','rib','hatB','mountX'],d:bun({hatTop:150,hatRb:19.7,hatP:1.1,cuffH:8,pomR:5.8})},
+  mikolaj:{n:'Mikołaj',desc:'Korpus i czapka z mankietem i pomponem (dwa pliki).',tune:'hatTop',f:{real:1,hat:'mikolaj'},g:['bun','belly','rib','hatB','cuff','mountX'],d:bun({hatTop:150,hatRb:20.5,hatP:1.1,cuffH:8,pomR:5.8})},
   duszek:{n:'Duszek',desc:'Żebrowane prześcieradło z falbaną i twarzą z wgłębień.',f:{real:1,kind:'ghost'},g:['ghost','rib'],d:Object.assign({},RIBS,{height:105,hemR:27.5,headR:19,scal:7,scalD:9,ribs:46,face:1,pitD:2.8})},
   jajko:{n:'Jajko',desc:'Miseczka i czapka na jajko niespodziankę 44 × 68 mm (dwa pliki).',f:{real:1,kind:'egg',cap:'plain'},g:['eggOut','egg','rib','eggEars'],d:Object.assign({},EGGD)},
   jajko_krasnal:{n:'Jajko z krasnalem',desc:'Miseczka i czapka jajka z przytopioną czapką krasnala.',f:{real:1,kind:'egg',cap:'krasnal'},g:['eggOut','egg','rib','hatE'],d:Object.assign({},EGGD,{hatTop:128.5,hatZ:66,hatRb:24.2,hatP:1.35,cuffH:8,pomR:5.8})},
@@ -825,7 +875,7 @@ const M={
   dynia:{n:'Dynia',desc:'Szeroka, spłaszczona bryła 100 × 100 mm z szypułką.',f:{kind:'egg',stem:true},g:['body','ribsOld','stem'],old:1,d:{height:65,width:100,egg:0,full:.8,flat:.05,ribs:36,stemH:18,stemR:8}},
   balwan:{n:'Bałwan',desc:'Trzy żebrowane kule, kapelusz i marchewka.',f:{kind:'snow',nose:true},g:['snow','snowhat','ribsOld','nose'],old:1,d:{width:56,midRatio:.8,headRatio:.6,overlap:8,flat:.05,ribs:50,hatH:38,noseLen:14,noseR:3.4}}
 };
-const ORDER=['krolik','kot','lis','mis','sowa','renifer','aniol','krasnal','mikolaj','duszek','jajko','jajko_krasnal','jajko_mikolaj','piskle','dynia','balwan'];
+const ORDER=['krolik','kot','lis','mis','sowa','renifer','renifer_kregiel','aniol','krasnal','mikolaj','duszek','jajko','jajko_krasnal','jajko_mikolaj','piskle','dynia','balwan'];
 const defaults=id=>Object.assign({},M[id].old?BASE:{},M[id].d);
 
 function profFromR(rFn,y0,y1,N,closeTop){
@@ -901,7 +951,7 @@ function fileNames(id,P){
   const F=M[id].f;
   if(F.kind==='egg'&&F.real)return[id+'_miseczka.stl',id+'_czapka.stl'];
   if(F.hat)return[id+'_korpus.stl',id+'_czapka.stl'];
-  if(P&&P.detach&&F.ears)return[id+'_korpus.stl',id+'_ucho_prawe.stl',id+'_ucho_lewe.stl'];
+  if(P&&P.detach&&F.ears){const w=F.ears==='ant'?'poroze':'ucho';return[id+'_korpus.stl',id+'_'+w+'_prawe.stl',id+'_'+w+'_lewe.stl'];}
   return[id+'.stl'];
 }
 
@@ -912,12 +962,18 @@ const $=s=>document.querySelector(s);
 const FMT={mm:v=>v.toFixed(v%1?1:0).replace('.',',')+' mm',pct:v=>Math.round(v*100)+'%',deg:v=>Math.round(v)+'°',num:v=>v.toFixed(2).replace('.',','),int:v=>String(Math.round(v))};
 const GR={
   bun:{t:'Bryła',items:[
-    {k:'bodyW',l:'Szerokość korpusu',min:28,max:52,step:.5,f:'mm'},
-    {k:'bodyHz',l:'Wysokość brzucha',min:36,max:66,step:1,f:'mm'},
-    {k:'bodyN',l:'Kształt brzucha (więcej = bardziej kwadratowy)',min:1.6,max:4.5,step:.1,f:'num'},
-    {k:'headR',l:'Wielkość głowy (promień)',min:11,max:22,step:.5,f:'mm'},
-    {k:'headZ',l:'Wysokość głowy',min:88,max:122,step:1,f:'mm'},
+    {k:'bodyW',l:'Szerokość korpusu',min:28,max:56,step:.5,f:'mm'},
+    {k:'headR',l:'Wielkość głowy (promień)',min:11,max:24,step:.5,f:'mm'},
+    {k:'headZ',l:'Wysokość głowy (w górę / w dół)',min:84,max:140,step:1,f:'mm'},
+    {k:'neckR',l:'Szyja: promień walca między brzuchem a głową (0 = brak)',min:0,max:16,step:.2,f:'mm'},
     {k:'blend',l:'Płynność szyi (mniej = głębsza szyja)',min:6,max:40,step:1,f:'int'}]},
+  belly:{t:'Brzuch',items:[
+    {k:'bodyHz',l:'Wysokość brzucha (półoś pionowa)',min:36,max:72,step:1,f:'mm'},
+    {k:'bellyDz',l:'Położenie najszerszego miejsca (w górę / w dół)',min:-34,max:16,step:1,f:'mm'},
+    {k:'bodyN',l:'Kształt dołu (więcej = bardziej kwadratowy)',min:1.6,max:4.5,step:.1,f:'num'},
+    {k:'bodyNu',l:'Kształt góry (więcej = bardziej kwadratowy)',min:1.2,max:4.5,step:.1,f:'num'}]},
+  head:{t:'Głowa',items:[
+    {k:'headK',l:'Wydłużenie głowy w pionie (1 = kula)',min:.8,max:1.5,step:.02,f:'num'}]},
   rib:{t:'Żebra',items:[
     {k:'ribs',l:'Liczba żeber',min:0,max:64,step:1,f:'int'},
     {k:'ribDepth',l:'Głębokość rowków (łącznie)',min:0,max:3.2,step:.1,f:'mm'},
@@ -925,8 +981,16 @@ const GR={
   mount:{t:'Mocowanie dodatków',items:[
     {k:'earX',l:'Rozstaw gniazd od osi',min:3,max:10,step:.5,f:'mm'},
     {k:'earTilt',l:'Pochylenie na zewnątrz',min:0,max:35,step:1,f:'deg'},
+    {k:'earPitch',l:'Pochylenie do przodu (+) / do tyłu (−)',min:-30,max:30,step:1,f:'deg'},
     {k:'earT',l:'Grubość dodatków',min:3,max:8,step:.1,f:'mm'},
     {k:'detach',l:'Wymienne: czop 5×5×8 i gniazda, osobne pliki',type:'bool'},
+    {k:'explode',l:'Rozsunięcie wymiennych części w podglądzie',min:0,max:60,step:1,f:'mm'}]},
+  mountR:{t:'Mocowanie poroża',items:[
+    {k:'earX',l:'Rozstaw poroża od osi',min:3,max:11,step:.5,f:'mm'},
+    {k:'earTilt',l:'Kąt poroża na zewnątrz',min:0,max:40,step:1,f:'deg'},
+    {k:'earPitch',l:'Kąt poroża do przodu (+) / do tyłu (−)',min:-30,max:30,step:1,f:'deg'},
+    {k:'earT',l:'Grubość poroża i uszu',min:3,max:8,step:.1,f:'mm'},
+    {k:'detach',l:'Poroże wymienne: czop 5×5×8 i gniazda, osobne pliki',type:'bool'},
     {k:'explode',l:'Rozsunięcie wymiennych części w podglądzie',min:0,max:60,step:1,f:'mm'}]},
   mountX:{t:'Podgląd',items:[
     {k:'explode',l:'Rozsunięcie czapki w podglądzie',min:0,max:80,step:1,f:'mm'}]},
@@ -950,7 +1014,17 @@ const GR={
     {k:'earLean',l:'Odchylenie na zewnątrz',min:0,max:12,step:.2,f:'mm'}]},
   ant:{t:'Poroże',items:[
     {k:'antS',l:'Rozmiar poroża',min:.6,max:1.6,step:.02,f:'num'},
-    {k:'antW',l:'Grubość gałęzi',min:.7,max:1.5,step:.02,f:'num'}]},
+    {k:'antW',l:'Grubość gałęzi',min:.7,max:1.5,step:.02,f:'num'},
+    {k:'antLv',l:'Liczba poziomów (odnóg)',min:1,max:5,step:1,f:'int'},
+    {k:'antSp',l:'Odstęp między poziomami',min:8,max:18,step:.5,f:'mm'},
+    {k:'antTine',l:'Długość odnóg',min:.6,max:1.6,step:.02,f:'num'},
+    {k:'antAng',l:'Kąt odnóg względem gałęzi głównej',min:15,max:65,step:1,f:'deg'}]},
+  leaf:{t:'Uszy-liście (przytopione do głowy)',items:[
+    {k:'leafL',l:'Długość uszu',min:10,max:36,step:.5,f:'mm'},
+    {k:'leafW',l:'Szerokość uszu',min:5,max:16,step:.5,f:'mm'},
+    {k:'leafT',l:'Grubość uszu',min:2,max:6,step:.1,f:'mm'},
+    {k:'leafAng',l:'Kąt uszu od pionu (90° = poziomo)',min:0,max:95,step:1,f:'deg'},
+    {k:'leafPos',l:'Położenie na głowie (kąt od czubka)',min:30,max:100,step:1,f:'deg'}]},
   tail:{t:'Ogon',items:[
     {k:'tailL',l:'Długość',min:20,max:60,step:1,f:'mm'},
     {k:'tailR',l:'Grubość (promień)',min:4,max:12,step:.1,f:'mm'},
@@ -1222,7 +1296,7 @@ let noteT=0;
 function note(t){const n=$('#note');n.textContent=t;clearTimeout(noteT);noteT=setTimeout(()=>{n.textContent='';},6000);}
 
 $('#btnReset').addEventListener('click',()=>{params[cur]=defaults(cur);renderControls();rebuild(false);persist();note('Przywrócono ustawienia modelu.');});
-const FAM={bun:['bodyW','bodyHz','bodyN','headR','headZ','blend','ribs','earTilt','earX','earT'],egg:['eggW','eggH','eggZ','eggNL','eggNU','seam','cavR','floor','lipH','wallCup','ceilZ','ribs']};
+const FAM={bun:['bodyW','bodyHz','bodyN','bodyNu','bellyDz','neckR','headR','headZ','blend','ribs','earTilt','earPitch','earX','earT'],egg:['eggW','eggH','eggZ','eggNL','eggNU','seam','cavR','floor','lipH','wallCup','ceilZ','ribs']};
 const famOf=P=>'bodyW' in P?'bun':'eggW' in P?'egg':null;
 $('#btnAlign').addEventListener('click',()=>{
   const src=params[cur],fam=famOf(src);

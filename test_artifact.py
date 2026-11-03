@@ -1,8 +1,8 @@
 """Zgodnosc podgladu w przegladarce (artifact/zebrowana_kolekcja.html) ze skryptami Pythona (STANDARD v1.0).
 Node ladowany jest rdzeniem podgladu (test_artifact.js); tu porownanie liczbowe: profile, porty, ramki, wneka jajka, POLA 3D (krolik, dynia,
-balwan na siatce 1 mm) oraz test dymny wszystkich 16 modeli. Zwraca kod 1, gdy cos sie rozjezdza.
+balwan na siatce 1 mm) oraz test dymny wszystkich 17 modeli (z reniferem kregiel: profil, porty, ramki, czesci plaskie). Zwraca kod 1, gdy cos sie rozjezdza.
 Uzycie:  python test_artifact.py [plik.html] [--print]
-  --print: dodatkowo eksportuje wszystkie 16 modeli (24 pliki STL, siatka 0,5 mm) tak jak przycisk 'Zapisz' w podgladzie i puszcza je przez verify_print.py
+  --print: dodatkowo eksportuje wszystkie 17 modeli i 5 skrajnych wariantow renifera kregiel (32 pliki STL, siatka 0,5 mm) tak jak przycisk 'Zapisz' w podgladzie i puszcza je przez verify_print.py
            (szczelnosc, zdegenerowane, samoprzeciecia, sciany wnek) - ta sama kontrola, co pliki z Pythona.
 """
 import sys, os, json, base64, subprocess, time
@@ -78,6 +78,44 @@ for i, side in enumerate((+1, -1)):
     fj = J["bun"]["frames"][i]
     dm = max(float(np.abs(np.array(fj[k]) - getattr(port.frame, k)).max()) for k in "OABC")
     check(f"krolik: ramka mocowania {'prawe' if side > 0 else 'lewe'} (O,A,B,C)", dm, 1e-6)
+
+# --- renifer kregiel: profil (szyja, brzuch dol/gora, glowa elipsoidalna), porty, ramki (przod/tyl), czesci plaskie (poroze N poziomow, ucho-lisc)
+import renifer_kregiel as RK
+from parts import antler_flat, leaf_flat
+print("renifer kregiel: JS vs Python (shapes.bunny_profile / renifer_kregiel.py / parts.py):")
+K = J["kreg"]; zk = np.array(K["zs"])
+for name, v in K["var"].items():
+    Pv = v["full"]
+    check(f"  {name}: profil R(z)", float(np.abs(np.array(v["prof"]) - SH.bunny_profile(zk, Pv)).max()), 1e-4)
+    check(f"  {name}: wysokosc glowy (top)", abs(v["top"] - (Pv["headZ"] + Pv["headR"] * Pv["headK"])), 1e-9)
+    for i, side in enumerate((+1, -1)):
+        check(f"  {name}: P0 poroza {side:+d}", float(np.abs(np.array(v["P0"][i]) - SH.bunny_P0(side, Pv, Pv["earX"])).max()), 1e-9)
+        for kind, fr_py in (("ant", RK.ant_frame(side, Pv)), ("leaf", RK.leaf_frame(side, Pv))):
+            fj = v[kind][i]
+            check(f"  {name}: ramka {kind} {side:+d} (O,A,B,C)", max(float(np.abs(np.array(fj[kk]) - getattr(fr_py, kk)).max()) for kk in "OABC"), 1e-9)
+    # sdf glowy (przyblizenie pierwszego rzedu): na szczycie / rownikowi punkt 0,7 / 2 mm na zewnatrz powierzchni -> ok. -(odleglosc) + luz 0,3
+    for (pt, val), dist in zip(v["sdf"][:2], (0.7, 2.0)):
+        check(f"  {name}: sdf glowy {np.round(pt, 1).tolist()} = {0.3 - dist:+.1f}", abs(val - (0.3 - dist)), 0.12 if Pv["headK"] > 1 else 1e-9)
+FL = K["flat"]; pts = np.array(FL["pts"])
+for name, fpj in FL["parts"].items():
+    o, kind = fpj["P"], fpj["kind"]
+    Pf = dict(RK.params(), **o)
+    if kind == "ant":
+        fp = antler_flat(0.1, fpj["mirror"], levels=Pf["antLv"], spacing=Pf["antSp"], tine=Pf["antTine"], angle=Pf["antAng"], s=Pf["antS"], w=Pf["antW"], T=Pf["earT"])
+        G = __import__("parts").antler_geom(Pf["antLv"], Pf["antSp"], Pf["antTine"], Pf["antAng"], Pf["antS"])
+        check(f"  czesc {name}: dlugosc L (JS) vs antler_geom (+2 mm marginesu podgladu nie wchodzi w L)", abs(fpj["L"] - G["Lc"]), 1e-6)
+        check(f"  czesc {name}: zakres a (AR)", abs(fpj["ar"][1] - G["AR"]), 1e-6)
+    else:
+        fp = leaf_flat(Pf["leafL"], Pf["leafW"], Pf["leafT"], 0.1)
+    # JS (Canvas) i Python (PIL) rastruja kontur nieco inaczej (do ~0,4 mm na zaokraglonych zlaczach odnog; pole top ma nachylenie k = 2,2):
+    # kontrola: (1) plaszczyzna c = 0,4 (F ~ odleglosc od konturu): maks. |dF| w pasie <= 0,45; (2) zadnych punktow po przeciwnych stronach powierzchni
+    # z zapasem (|F| > 0,25 w 2D, > 0,6 w 3D) - to wychwytuje bledne polozenie / liczbe odnog, kat lub dlugosc
+    Fj = np.array(fpj["F"], np.float32); Fp = fp.F(pts[:, 0], pts[:, 1], pts[:, 2])
+    s2 = pts[:, 2] == 0.4
+    m2 = s2 & ((np.abs(Fj) < 0.38) | (np.abs(Fp) < 0.38))
+    check(f"  czesc {name}: kontur 2D (c = 0,4) JS vs Python, max |dF| w pasie ({int(m2.sum())} pkt)", float(np.abs(Fj - Fp)[m2].max()), 0.45)
+    check(f"  czesc {name}: kontur 2D: punkty po innej stronie z zapasem > 0,25", float((s2 & ((Fj > 0) != (Fp > 0)) & (np.minimum(np.abs(Fj), np.abs(Fp)) > 0.25)).sum()), 0, "")
+    check(f"  czesc {name}: pole 3D: punkty po innej stronie z zapasem > 0,6", float((((Fj > 0) != (Fp > 0)) & (np.minimum(np.abs(Fj), np.abs(Fp)) > 0.6)).sum()), 0, "")
 
 # --- jajko: profil, wneka kubka i czapki (z sufitem 52 st.), P0
 ze = np.array(J["egg"]["zs"])
@@ -167,6 +205,14 @@ sm = J["smoke"]
 check("balwan: wysokosc korpusu+nosa", abs(sm["balwan"]["h"] - 150.0), 0.6)
 check("dynia: szerokosc (100 mm + zebra)", abs(sm["dynia"]["w"] - 100.0), 1.0)
 check("krolik: wysokosc calosci (150 mm)", abs(sm["krolik"]["h"] - 150.0), 1.0)
+_xh, _ylo, _yhi, _zhi = RK.extents()
+_ax, _F = RK.body_field(RK.params(), 1.0, fuse_ant=True)
+_m = __import__("lib").mesh_from_F(_F, _ax, 1.0)
+_e = _m.bounds[1] - _m.bounds[0]
+# oba na siatce 1 mm (podglad: szkic): rozrzut ~ voxel
+check("renifer_kregiel: calosc JS vs Python, szerokosc (X)", abs(sm["renifer_kregiel"]["w"] - _e[0]), 1.5)
+check("renifer_kregiel: calosc JS vs Python, wysokosc (Z)", abs(sm["renifer_kregiel"]["h"] - _e[2]), 1.5)
+check("renifer_kregiel: calosc JS vs Python, glebokosc (Y)", abs(sm["renifer_kregiel"]["d"] - _e[1]), 1.5)
 
 if "--print" in sys.argv:
     import tempfile, glob

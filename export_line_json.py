@@ -20,6 +20,7 @@ import shapes as SH
 import build_pumpkin as BP
 import build_snowman as BS
 import build_egg as BE
+import renifer_kregiel as RK
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 R3 = lambda v: round(float(v), 4)
@@ -124,9 +125,14 @@ def build():
     B = MD.BUNNY
     M["krolik"] = dict(
         H=B.H, outline=simplify_outline(B.outline), R=sample_R(B.Rfun, 0.0, B.H), ports=ports_json(B), pad=B.pad,
-        params=dict(bodyW=2 * SH.BODY_R, bodyHz=SH.BODY_HZ, bodyN=SH.BODY_N, headR=SH.HEAD_R, headZ=SH.HEAD_ZC, blend=SH.SMOOTH_P,
-                    ribs=SH.N_BUNNY, ribDepth=2 * S.RIB_AMP, ribPow=0.8, earX=S.EAR_X, earTilt=R3(math.degrees(S.TILT))),
+        params=dict(bodyW=2 * SH.BODY_R, bodyHz=SH.BODY_HZ, bodyN=SH.BODY_N, bodyNu=SH.BODY_N, bellyDz=0.0, neckR=0.0, headK=1.0,
+                    headR=SH.HEAD_R, headZ=SH.HEAD_ZC, blend=SH.SMOOTH_P,
+                    ribs=SH.N_BUNNY, ribDepth=2 * S.RIB_AMP, ribPow=0.8, earX=S.EAR_X, earTilt=R3(math.degrees(S.TILT)), earPitch=0.0),
         ribs=rib_json([dict(N=SH.N_BUNNY, up=None, down=None)]), zport=R3(B.zport))
+
+    # --- renifer: domyslne parametry poroza; renifer_kregiel: caly zestaw parametrow wzoru (renifer_kregiel.py)
+    M["renifer"] = dict(params=dict(RK.ANT, antLv=2))
+    M["renifer_kregiel"] = dict(params=RK.params())
 
     # --- jajko
     E = MD.EGG
@@ -192,6 +198,9 @@ if __name__ == "__main__":
     kb = os.path.getsize(path) / 1024
     print(f"line.json: {kb:.1f} kB, standard v{d['version']}, zrodla {d['source_sha1']}")
     for k, m in d["models"].items():
+        if "H" not in m:
+            print(f"  {k:7s} parametry: {len(m['params'])}")
+            continue
         print(f"  {k:7s} H={m['H']:.1f}  R:{len(m['R'])} pkt  obrys:{len(m['outline'])} pkt  porty:{list(m['ports'])}  zebra:{[b['N'] for b in m['ribs']['bands']]}  dev={m['R_maxdev']}")
     print("  luz czop-gniazdo:", d["peg_socket_clearance"])
     print("  kontrole:", d["checks"])

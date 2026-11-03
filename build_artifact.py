@@ -48,8 +48,12 @@ h = sub1(h, "ceil:P.ceilZ,Rtop:5,", "ceil:P.ceilZ,Rtop:LINE.models.jajko.cone.R_
 # 4. domyslne parametry krolika / jajka z line.json
 h = sub1(h, "const RIBS={ribs:36,ribDepth:1.6,ribPow:.8};",
          "const RIBS={ribs:LINE.models.krolik.params.ribs,ribDepth:LINE.models.krolik.params.ribDepth,ribPow:LINE.models.krolik.params.ribPow};", "RIBS")
-h = sub1(h, "const BUN={bodyW:38,bodyHz:52,bodyN:2.5,headR:16,headZ:105,blend:20,earTilt:14,earX:6,earT:5.5,ringH:.7,detach:0,explode:0};",
+h = sub1(h, "const BUN={bodyW:38,bodyHz:52,bodyN:2.5,bodyNu:2.5,bellyDz:0,neckR:0,headK:1,headR:16,headZ:105,blend:20,earTilt:14,earPitch:0,earX:6,earT:5.5,ringH:.7,detach:0,explode:0};",
          "const BUN=Object.assign({},LINE.models.krolik.params,{earT:5.5,ringH:.7,detach:0,explode:0});", "BUN")
+h = sub1(h, "const ANT={antS:1,antW:1,antLv:2,antSp:13,antTine:1,antAng:38.121};",
+         "const ANT=Object.assign({},LINE.models.renifer.params);", "ANT")
+h = re.sub(r"const KREG=\{[^}]*\};", lambda m: "const KREG=Object.assign({},LINE.models.renifer_kregiel.params);", h, count=1)
+assert "LINE.models.renifer_kregiel.params" in h, "lacka KREG"
 h = sub1(h, "const EGG_REF={W:56,H:89.5,NL:2.2,NU:1.9};",
          "const EGG_REF={W:LINE.models.jajko.params.eggW,H:LINE.models.jajko.params.eggH,NL:2.2,NU:1.9};", "EGG_REF")
 h = sub1(h, "const EGGD={eggW:56,eggH:89.5,eggZ:34,eggNL:2.2,eggNU:1.9,seam:34,cavR:24,floor:4.5,lipH:7,wallCup:3.3,ceilZ:76,ribs:48,ribDepth:1.6,ribPow:.8,explode:30,earTilt:14,earX:6,earT:5.5,ringH:.7,earL:30.9,earW:14,ears:0};",

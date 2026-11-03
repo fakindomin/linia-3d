@@ -100,7 +100,7 @@ Stan: **210 PASS, 0 FAIL** (`verify_all.py`, z samokontrolą testera druku) oraz
 
 ### 7a. Kontrola druku — szczelność i poprawność każdego STL (`verify_print.py`)
 
-Każdy plik do druku (Python z `out/` **i** eksport z podglądu) przechodzi tę samą kontrolę; `FAIL` = nie drukować. `python3 verify_print.py out/` (ok. 2 min, 2 procesy), `python3 verify_print.py --selftest` (tester testera: znane dobre i złe siatki), `python3 test_artifact.py --print` (16 modeli z podglądu → STL → ta sama kontrola).
+Każdy plik do druku (Python z `out/` **i** eksport z podglądu) przechodzi tę samą kontrolę; `FAIL` = nie drukować. `python3 verify_print.py out/` (ok. 2 min, 2 procesy), `python3 verify_print.py --selftest` (tester testera: znane dobre i złe siatki), `python3 test_artifact.py --print` (17 modeli + 5 skrajnych wariantów renifera kręgla z podglądu → STL → ta sama kontrola).
 
 | # | Sprawdzenie | Próg |
 |---|---|---|
@@ -139,7 +139,7 @@ pochodzą z `line.json`, generowanego z `standard.py`/`models.py`/`shapes.py`/`b
 ```bash
 python3 export_line_json.py     # standard.py + modele → line.json (odcisk źródeł source_sha1, kontrole: profil < 0,01 mm, pasma bałwana = snow_F)
 python3 build_artifact.py       # artifact/zebrowana_kolekcja.src.html + line.json + line_core.js → .html (testy) i .page.html (do publikacji)
-python3 test_artifact.py        # JS (Node) kontra Python: profile, porty, pola 3D (królik, dynia, bałwan), dym 16 modeli; kod 1 przy rozbieżności
+python3 test_artifact.py        # JS (Node) kontra Python: profile, porty, pola 3D (królik, dynia, bałwan), dym 17 modeli; kod 1 przy rozbieżności
 # publikacja: Artifact publish artifact/zebrowana_kolekcja.page.html (ten sam url → ta sama strona)
 ```
 
@@ -151,12 +151,32 @@ Zmiana stałej/profilu: edytuj Python → `export_line_json.py` → `build_artif
 * Dynia w podglądzie ma osobną szerokość (po grzbietach żeber) i wysokość bryły; profil jest skalowany osobno w poziomie i w pionie, N żeber rośnie z szerokością (rozstaw 3,4 mm zostaje), port ogonka jedzie z górą bryły. Domyślnie (100 × 65 mm) = skrypt Pythona; inne rozmiary istnieją tylko w podglądzie (siatka robocza).
 * Jajko w podglądzie: **wnętrze i szew są stałe, obrys jest swobodny.** Wnęka miseczki i czapki, szew, kołnierz, sufit (52°) liczą się z powłoki odniesienia (domyślny kształt jajka), a nie z obrysu. Obrys (szerokość, wysokość, wysokość najszerszego miejsca, pełność dołu i góry) = `max(kształt, wnętrze + ścianka)`: miseczka ≥ `wallCup`, czapka ≥ 2,6 mm, kołnierz ≥ 2,0 mm, dobudowa ze spadkiem ≤ 1,3 (bez ostrzejszych nawisów); gdy kształt jest za chudy, podgląd ostrzega. Wniosek: jajko niespodzianka 44 × 68 mm pasuje tak samo w każdym wariancie, a miseczki i czapki różnych wariantów są wymienne. Test: `test_artifact.py` (wnęka identyczna z domyślną, ścianka ≥ minimum). Skrypty Pythona mają jeden obrys (standardowy).
 
+## 9a. Korpus z parametrami: szyja, brzuch, głowa, poroże N poziomów, uszy-liście (renifer „kręgiel”)
+
+Profil korpusu bazowego (`shapes.bunny_profile(z, p)`) to **trzy człony p-normy** (wykładnik `blend`): brzuch (nadelipsoida, dół i góra z osobnymi wykładnikami `bodyN` / `bodyNu`,
+najszersze miejsce na `0,8·bodyHz + bellyDz`), głowa (elipsoida: promień `headR`, oś pionowa `headR·headK`) i **szyja** (walec `neckR` od brzucha do środka głowy, 0 = brak).
+Wartości domyślne (`BODY_DEFAULTS`: `bodyNu = bodyN`, `bellyDz = 0`, `neckR = 0`, `headK = 1`) dają dokładnie dawny profil królika (różnica 0,0). Głowę podnosi/opuszcza `headZ`;
+szyja rośnie razem z nią, więc głowa się nie odrywa (podgląd ostrzega, gdy przerwa jednak powstaje). Port poroża: `bunny_P0(side, p, earX)` (uwzględnia `headK`).
+
+* Poroże (`parts.antler_geom` / `antler_flat`): gałąź główna + `antLv` odnóg (1–5) co `antSp` mm, każda o długości `12,965·antTine` pod kątem `antAng` od osi gałęzi; trzon gałęzi rozciąga się
+  do ostatniej odnogi, korona zostaje. Domyślne (2, 13, 1, 38,121°) = dawne poroże (maska i pole `top` identyczne). `antS` = rozmiar, `antW` = grubość gałęzi, `earT` = grubość płaskownika.
+* Kąty: `earTilt` (na zewnątrz, standard 14°), **`earPitch`** (do przodu +, do tyłu −; obrót ramki wokół osi a, `mount_frame(side, P0, tilt, pitch)`; 0 = dawna ramka), kąt odnóg `antAng`
+  i kąt bocznych uszu `leafAng` (od pionu).
+* Boczne ucho-liść (`parts.leaf_flat`, `shapes.head_port`): przytopione do głowy w punkcie pod kątem `leafPos` od czubka, ostry czubek, bez owalu, grubość `leafT` (ramka: y = T/2 − 2,5, czyli ucho leży symetrycznie względem y = 0).
+* Wzór ze zdjęcia: `renifer_kregiel.py` (parametry = suwaki podglądu; `export_line_json.py` eksportuje je do `line.json`, podgląd czyta stamtąd). Buduje `renifer_kregiel_calosc.stl` (poroże i uszy przytopione),
+  `renifer_kregiel_korpus.stl` + `renifer_kregiel_poroze_{prawe,lewe}.stl` (poroże wymienne na czopie 5×5×8) i uruchamia `verify_set` (14 kontroli) na **nagim** korpusie bez uszu-liści:
+  koperta modelu to bryła obrotowa, więc ucho-liść (element przytopiony) jest poza nią z definicji. Kontrola w `verify_all.py` (sekcja 10).
+* Odchylenie: wysokość całości 161,8 mm (nie 150): wymiary ze zdjęcia; przycisk „Dopasuj do 150 mm” w podglądzie skaluje poroże (`antS`).
+* Nowe parametry mają testy zgodności JS ↔ Python (`test_artifact.py`): profil dla 5 wariantów (szyja, brzuch, głowa elipsoidalna), porty, ramki z pochyleniem, pola części płaskich (poroże 1/2/3/5 poziomów, lustro, ucho-liść;
+  rasteryzacja JS i PIL różni się do ~0,4 mm na zaokrąglonych złączach, więc tolerancja jest 2D ≤ 0,45 mm i zero punktów po przeciwnych stronach powierzchni z zapasem), a `--print` eksportuje 5 skrajnych wariantów
+  (głowa wysoko, poroże 5 poziomów z kątami, wymienne, nisko, szeroki) i puszcza je przez `verify_print.py`.
+
 ## 10. Pliki
 
-Żebra (19): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
+Żebra (19 + 4 renifer kręgiel: `renifer_kregiel_calosc/korpus/poroze_prawe/poroze_lewe`): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
 `jajko_czapka_uszy`, `jajko_czapka_uszy_dlugie`, `dynia_korpus`, `dynia_korpus_platy`, `dynia_ogonek`, `balwan`, `balwan_nos`, `balwan_miotla` — plus dodatkowe uszy `ucho_{mis,kot,lis,sowa}_{prawe,lewe}`.
 Lowpoly (19): te same nazwy z prefiksem `lp_` (np. `lp_krolik_calosc.stl`, `lp_balwan.stl`).
 
 Skrypty: `standard.py`, `models.py`, `lp.py`, `lp_parts.py`, `meshclean.py` + `clean_stl.py` (czyszczenie mikro-trójkątów), `verify_print.py` (kontrola druku), `build_std_lowpoly.py` (wszystkie lp_*.stl), `build_std_ribbed_parts.py` (części żebrowane),
-`build_egg.py` + `build_dlugie.py` (czapki jajka), `build_figurki.py`/`build_pumpkin.py`/`build_snowman.py` (korpusy żebrowane), `verify_all.py`, `new_model_template.py`.
+`build_egg.py` + `build_dlugie.py` (czapki jajka), `build_figurki.py`/`build_pumpkin.py`/`build_snowman.py` (korpusy żebrowane), `renifer_kregiel.py` (renifer z parametrami wzoru), `verify_all.py`, `new_model_template.py`.
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.

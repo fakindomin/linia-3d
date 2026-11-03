@@ -16,7 +16,7 @@ BODY = SH.body_params(sil=1, bodyW=53.0, baseR=16.5, bellyZ=48.0, shZ=73.0, shR=
 MOUNT = dict(earX=11.5, earTilt=12.0, earPitch=0.0, earT=5.0)                # poroze: rozstaw gniazd, kat na zewnatrz, kat przod/tyl, grubosc
 ANT = dict(antS=1.0, antW=1.0, antLv=2, antSp=13.0, antTine=1.0, antAng=round(ANT_ANGLE, 3))   # = dawne poroze renifera (2 poziomy), domyslne suwaki poroza
 ANT_K = dict(ANT, antW=1.35, antLv=3, antAng=44.0, antIn=1)                  # kregiel: 3 poziomy, grubsze galezie, odnogi do srodka (jak na zdjeciu; antIn = 0 daje dawny uklad)
-LEAF = dict(leafL=17.0, leafW=10.0, leafT=3.4, leafAng=55.0, leafPos=60.0)   # boczne uszy-liscie: dlugosc, szerokosc, grubosc, kat od pionu, polozenie (kat od czubka glowy)
+LEAF = dict(leafL=17.0, leafW=10.0, leafT=3.4, leafAng=50.0, leafPos=46.0, leafGap=1.0)   # boczne uszy-liscie: dlugosc, szerokosc, grubosc, kat od pionu, polozenie (kat od czubka glowy), odstep od poroza (ucho lezy przed porozem)
 
 
 def params():
@@ -144,6 +144,10 @@ def build(vox=0.35, par=None):
         parts[f"renifer_kregiel_poroze_{nm}.stl"] = dict(mesh=trimesh.load(os.path.join(OUT, f"renifer_kregiel_poroze_{nm}.stl")), port=pn)
     print("== verify_set (korpus bez uszu-lisci + poroza) ==")
     n_pass, bad = verify_standard(P, vox)
+    dmin = ear_antler_clearance(P)
+    ok = dmin >= MIN_EAR_GAP
+    print(f"  [{'PASS' if ok else 'FAIL'}] uszy-liscie nie dotykaja poroza: najmniejszy odstep poza glowa {dmin:.2f} mm (wymagane >= {MIN_EAR_GAP})")
+    n_pass, bad = n_pass + int(ok), bad + ([] if ok else ["odstep uszy-liscie / poroze"])
     print(f"czas {time.time() - t0:.0f} s")
     return n_pass, bad
 
@@ -158,6 +162,30 @@ def verify_standard(par=None, vox=0.35, log=print):
     parts = {f"renifer_kregiel_poroze_{nm}.stl": dict(mesh=trimesh.load(os.path.join(OUT, f"renifer_kregiel_poroze_{nm}.stl")), port=pn) for s, nm, pn in SIDES}
     bodies = {"renifer_kregiel_korpus.stl": dict(mesh=bare, ports=["ear_R", "ear_L"])}
     return verify_set(KREG, bodies, parts, rib_z=[("renifer_kregiel_korpus.stl", 40.0, int(round(P["ribs"])))], log=log)
+
+
+MIN_EAR_GAP = 0.6   # minimalny odstep miedzy uchem-lisciem a porozem (poza glowa) [mm]
+
+
+def ear_antler_clearance(par=None, vox=0.25):
+    """najmniejszy odstep [mm] miedzy uchem-lisciem a porozem POZA glowa (obie czesci siedza w glowie, wiec tam sie stykaja z definicji);
+    pola obu czesci liczone osobno na drobnej siatce, odleglosc z transformaty odleglosci (EDT)"""
+    from build_figurki import add_local
+    from scipy import ndimage as ndi
+    P = par or params()
+    xh, ylo, yhi, zhi = extents(P)
+    G = antler_geom(P["antLv"], P["antSp"], P["antTine"], P["antAng"], P["antS"])
+    A = P["leafW"] / 2 + 2
+    axes, (X, Y, Z) = make_grid(-xh, xh, ylo, yhi, P["headZ"] - P["headR"] - 2.0, zhi, vox)
+    shp = tuple(len(a) for a in axes)
+    fl, fa = np.full(shp, -9.0, np.float32), np.full(shp, -9.0, np.float32)
+    for s in (+1, -1):
+        fl = add_local(fl, axes, leaf_frame(s, P), part_fn(leaf_part(P), None, peg=False, plate_b0=-4.5), a_rng=(-A, A), b_rng=(-9, P["leafL"] + 3), c_rng=(-1, 8))
+        fa = add_local(fa, axes, ant_frame(s, P), part_fn(ant_part(s < 0, P), None, peg=False, plate_b0=-4.5), a_rng=ant_ar(s, P), b_rng=(-9, G["Lc"] + 3), c_rng=(-1, 8))
+    outside = np.broadcast_to(SH.bunny_F(X, Y, Z, P) < -0.4, shp)   # poza korpusem (glowa + szyja)
+    d_leaf = ndi.distance_transform_edt(~(fl > 0)) * vox
+    sel = (fa > 0) & outside
+    return float(d_leaf[sel].min()) if sel.any() else float("inf")
 
 
 if __name__ == "__main__":

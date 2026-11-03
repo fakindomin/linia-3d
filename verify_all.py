@@ -238,6 +238,8 @@ if not miss:
         check(f"siatka {n}", ok, f"{r['ext']} tri {r['tris']}" + (f" nawis {r['overhang']['steep_mm2']} mm2" if "overhang" in r else ""))
     npass, bad_ = RK.verify_standard(log=lambda *a, **k: None)
     check(f"renifer kregiel: verify_set ({npass} kontroli: koperta, pasowanie czop/gniazdo, zebra N)", not bad_, bad_)
+    dmin_ = RK.ear_antler_clearance()
+    check(f"renifer kregiel: uszy-liscie nie dotykaja poroza (odstep poza glowa {dmin_:.2f} mm >= {RK.MIN_EAR_GAP})", dmin_ >= RK.MIN_EAR_GAP)
 
 # ------------------------------------------------------------------ kontrola druku: tester testera (pelna kontrola plikow: python verify_print.py)
 import verify_print as _VP

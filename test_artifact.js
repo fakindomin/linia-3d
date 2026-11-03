@@ -28,6 +28,7 @@ const gridOut = G => ({x0: G.x0, y0: G.y0, z0: G.z0, v: G.v, nx: G.nx, ny: G.ny,
 {
   const V = {kregiel: {}, glowa_wysoko: {headZ: 128, neckZ: 110, neckR: 9}, brzuch: {bodyW: 46, bellyZ: 36, baseR: 22, shZ: 62, shR: 24},
              glowa_elips: {headK: 1.4, headR: 14, headZ: 96, neckZ: 78, blend: 14}, waska_szyja: {neckR: 5, neckZ: 90, shZ: 66, shR: 12, bellyZ: 52},
+             poroze_do_srodka: {earTilt: -14, antIn: 0, earX: 7},
              stary_pnorma: {sil: 0, bodyW: 49, bodyHz: 60, bellyDz: -26, bodyN: 3, bodyNu: 1.7, headR: 17.5, headZ: 100, headK: 1.2, neckR: 10.2, blend: 9}};
   const zs = []; for (let z = 0; z <= 150; z += 0.37) zs.push(z);
   out.kreg = {zs, var: {}};
@@ -115,7 +116,8 @@ if (stlDir) {
   if (process.argv[5] === 'all') {   // skrajne ustawienia suwakow renifera kregla: kazde musi dac szczelna siatke
     const VAR = {rk_glowa_wysoko: {headZ: 128, neckZ: 110, neckR: 9}, rk_poroze5: {antLv: 5, antSp: 10, antTine: 1.3, antAng: 50, earPitch: 18, earTilt: 24, antS: 1.1},
                  rk_wymienne: {detach: 1, earPitch: -10}, rk_nisko: {headZ: 92, neckZ: 76, shZ: 60, bellyZ: 30, leafAng: 80, antLv: 1},
-                 rk_szeroki: {bodyW: 62, baseR: 28, shR: 26, headR: 22, headK: 1.4}, rk_waska: {neckR: 5.5, neckZ: 90, shZ: 70, shR: 12}};
+                 rk_szeroki: {bodyW: 62, baseR: 28, shR: 26, headR: 22, headK: 1.4}, rk_waska: {neckR: 5.5, neckZ: 90, shZ: 70, shR: 12},
+                 rk_do_srodka: {earTilt: -16, antIn: 0, earX: 7, earPitch: 8}};
     for (const k in VAR) {
       const gs = X.exportGroups(X.buildModel('renifer_kregiel', Object.assign(X.defaults('renifer_kregiel'), VAR[k]), {vox: 0.5}));
       for (const g of gs) { const f = (gs.length > 1 ? k + '_' + g.g : k) + '.stl'; fs.writeFileSync(path.join(stlDir, f), X.stlBytes(g.parts)); out.stl.push(f); }

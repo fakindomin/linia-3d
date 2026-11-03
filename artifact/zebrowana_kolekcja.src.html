@@ -295,6 +295,16 @@ function manifoldGrid(G){
   }
   return{G:Object.assign({},G,{F}),flips:total};
 }
+/* mikro-krawędzie (< tol mm; powstają przy poprawkach siatki rozmaitej): zlewamy końce i usuwamy zdegenerowane trójkąty, żeby po zapisie STL nie było krawędzi >2 trójkąty */
+function collapseMicro(m,tol){
+  const p=m.p,ix=m.i,n=p.length/3,t2=tol*tol;let par=null;
+  const find=x=>{while(par[x]!==x){par[x]=par[par[x]];x=par[x];}return x;};
+  for(let k=0;k<ix.length;k+=3)for(let e=0;e<3;e++){const a=ix[k+e],b=ix[k+(e+1)%3],dx=p[a*3]-p[b*3],dy=p[a*3+1]-p[b*3+1],dz=p[a*3+2]-p[b*3+2];
+    if(dx*dx+dy*dy+dz*dz<t2){if(!par){par=new Int32Array(n);for(let i=0;i<n;i++)par[i]=i;}const ra=find(a),rb=find(b);if(ra!==rb)par[rb]=ra;}}
+  if(!par)return m;
+  const idx=[];for(let k=0;k<ix.length;k+=3){const a=find(ix[k]),b=find(ix[k+1]),c=find(ix[k+2]);if(a===b||b===c||a===c)continue;idx.push(a,b,c);}
+  return{p,i:new Uint32Array(idx)};
+}
 /* male izolowane skladowe (pylki z szumu pola): usuwamy, zostaje glowna bryla */
 function dropSpecks(m){
   const n=m.p.length/3,ix=m.i,par=new Int32Array(n);for(let i=0;i<n;i++)par[i]=i;
@@ -348,7 +358,7 @@ function surfaceNets(G0){
     if(j<ny-1&&((F[b+nx]>0)!==in0))quad(cid(i-1,j,k-1),cid(i-1,j,k),cid(i,j,k),cid(i,j,k-1),!in0);
     if(k<nz-1&&((F[b+sz]>0)!==in0))quad(cid(i-1,j-1,k),cid(i,j-1,k),cid(i,j,k),cid(i-1,j,k),!in0);
   }
-  return dropSpecks({p:new Float32Array(pos),i:new Uint32Array(idx)});
+  return dropSpecks(collapseMicro({p:new Float32Array(pos),i:new Uint32Array(idx)},0.0001));
 }
 /* układ siatki (x,y,z; z do góry) -> układ strony (y do góry, przód +z) */
 function toPage(m){const p=m.p;for(let k=0;k<p.length;k+=3){const y=p[k+1],z=p[k+2];p[k+1]=z;p[k+2]=-y;}return orient(m);}
@@ -540,7 +550,10 @@ function bunDef(P){
   };
   B.top=B.HC+B.HR*B.K;
   /* punkt na powierzchni głowy (kąt od pionu ph) dla bocznego ucha-liścia */
-  B.leafPort=(side,ph,T)=>[side*B.HR*Math.sin(ph),T/2-2.5,B.HC+B.HR*B.K*Math.cos(ph)];
+  B.leafPort=(side,ph,T)=>{const rr=B.HR*Math.sin(ph),z=B.HC+B.HR*B.K*Math.cos(ph);
+    if(P.leafGap==null)return[side*rr,T/2-2.5,z];
+    const yc=Y0+2.5-P.earT-P.leafGap-T/2;                    /* ucho przed porożem: odstęp leafGap między tylną ścianką ucha a przednią poroża */
+    return[side*Math.sqrt(Math.max(rr*rr-yc*yc,0)),yc+T/2-2.5,z];};
   return B;
 }
 function fillBun(G,B){latheField(G,{R:B.prof,N:B.n,amp:B.amp,pow:B.pw});planeZ(G,0,1e9);}
@@ -618,6 +631,20 @@ function fuseEars(G,B,spec,P,frameFn){
     const fr=frameFn(side),fp=side>0?mk0:mk1;
     localField(G,fr,partFn(fp,-4.5,null,false,spec.T+1.5),spec.ar(side),[-9,spec.L+3],[-1,8],'max');
   }
+}
+/* odstęp ucha-liścia od poroża poza głową: największe F poroża na próbkach wnętrza ucha (F ≈ −odległość; > −0,45 = dotyk) */
+function earTouch(B,P,leaf,spec,frameFn){
+  const frL=leaf.fr(1),frA=frameFn(1),gl=partFn(leaf.spec.mk(false),-4.5,null,false,leaf.spec.T+1.5),ga=partFn(spec.mk(false),-4.5,null,false,spec.T+1.5);
+  const A=P.leafW/2+2;let best=-1e9;
+  for(let a=-A;a<=A;a+=0.5)for(let b=-3;b<=leaf.spec.L;b+=0.5)for(let c=0.2;c<leaf.spec.T;c+=0.6){
+    if(gl(a,b,c)<=0)continue;
+    const x=frL.O[0]+a*frL.A[0]+b*frL.B[0]+c*frL.C[0],y=frL.O[1]+a*frL.A[1]+b*frL.B[1]+c*frL.C[1],z=frL.O[2]+a*frL.A[2]+b*frL.B[2]+c*frL.C[2];
+    if(Math.hypot(x,y)<B.prof(z)+0.4)continue;                       /* w głowie oba dodatki i tak są częścią bryły */
+    const dx=x-frA.O[0],dy=y-frA.O[1],dz=z-frA.O[2];
+    const f=ga(dx*frA.A[0]+dy*frA.A[1]+dz*frA.A[2],dx*frA.B[0]+dy*frA.B[1]+dz*frA.B[2],dx*frA.C[0]+dy*frA.C[1]+dz*frA.C[2]);
+    if(f>best)best=f;
+  }
+  return best;
 }
 function cutSockets(G,frameFn){
   for(const side of[1,-1])localField(G,frameFn(side),socketF,[-5,5],[-9,2],[-1,6],'cut');
@@ -773,6 +800,7 @@ function buildReal(id,P,opt){
     const la=P.leafAng*D2R,ph=P.leafPos*D2R;
     leaf={spec:earSpec('leaf',P,cres),fr:side=>mountFrame(side,B.leafPort(side,ph,P.leafT),la,0)};
     for(const sd of[1,-1])grow(leaf.fr(sd),leaf.spec,sd);
+    if(spec&&earTouch(B,P,leaf,spec,frameFn)>-0.45)warn.push('Ucho dotyka poroża. Zwiększ odstęp od poroża albo przesuń ucho.');
   }
   /* kontrola ciągłości: głowa nie może wisieć w powietrzu */
   for(let z=2;z<B.top-2;z+=0.5){if(B.prof(z)<2.5){warn.push('Głowa jest oderwana od korpusu (przerwa na wysokości '+Math.round(z)+' mm). Zwiększ szyję albo obniż głowę.');break;}}
@@ -1038,7 +1066,7 @@ const GR={
     {k:'explode',l:'Rozsunięcie wymiennych części w podglądzie',min:0,max:60,step:1,f:'mm'}]},
   mountR:{t:'Mocowanie poroża',items:[
     {k:'earX',l:'Rozstaw poroża od osi',min:3,max:14,step:.5,f:'mm'},
-    {k:'earTilt',l:'Kąt poroża na zewnątrz',min:0,max:40,step:1,f:'deg'},
+    {k:'earTilt',l:'Kąt poroża: na zewnątrz (+) / do środka (−)',min:-20,max:40,step:1,f:'deg'},
     {k:'earPitch',l:'Kąt poroża do przodu (+) / do tyłu (−)',min:-30,max:30,step:1,f:'deg'},
     {k:'earT',l:'Grubość poroża i uszu',min:3,max:8,step:.1,f:'mm'},
     {k:'detach',l:'Poroże wymienne: czop 5×5×8 i gniazda, osobne pliki',type:'bool'},
@@ -1076,7 +1104,8 @@ const GR={
     {k:'leafW',l:'Szerokość uszu',min:5,max:16,step:.5,f:'mm'},
     {k:'leafT',l:'Grubość uszu',min:2,max:6,step:.1,f:'mm'},
     {k:'leafAng',l:'Kąt uszu od pionu (90° = poziomo)',min:0,max:95,step:1,f:'deg'},
-    {k:'leafPos',l:'Położenie na głowie (kąt od czubka)',min:30,max:100,step:1,f:'deg'}]},
+    {k:'leafPos',l:'Położenie na głowie (kąt od czubka)',min:30,max:100,step:1,f:'deg'},
+    {k:'leafGap',l:'Odstęp od poroża (ucho leży przed porożem)',min:.6,max:4,step:.2,f:'mm'}]},
   tail:{t:'Ogon',items:[
     {k:'tailL',l:'Długość',min:20,max:60,step:1,f:'mm'},
     {k:'tailR',l:'Grubość (promień)',min:4,max:12,step:.1,f:'mm'},

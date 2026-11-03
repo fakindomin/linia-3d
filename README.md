@@ -14,7 +14,7 @@ python3 new_model_template.py     # demo „gruszka” w obu stylach + kontrola 
 python3 build_std_lowpoly.py      # 19 plików lp_*.stl (kilka sekund)
 python3 renifer_kregiel.py        # renifer „kręgiel”: całość, korpus z gniazdami, poroże wymienne + verify_set (ok. 30 s)
 ./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
-python3 verify_all.py             # 216 kontroli standardu na gotowych plikach out/*.stl
+python3 verify_all.py             # 217 kontroli standardu na gotowych plikach out/*.stl
 python3 verify_print.py out/      # szczelność i poprawność druku każdego STL (dziury, zdegenerowane, samoprzecięcia, ścianki; ok. 2 min)
 python3 export_line_json.py       # line.json: stałe, profile i porty dla artefaktu „Żebrowana kolekcja”
 python3 build_artifact.py         # składa stronę podglądu (artifact/zebrowana_kolekcja.page.html) z line.json

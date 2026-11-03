@@ -171,7 +171,11 @@ Głowę podnosi/opuszcza `headZ`; w trybie sylwetki szyja idzie razem z nią (`n
   do ostatniej odnogi, korona zostaje. Domyślne (2, 13, 1, 38,108°) = dawne poroże (maska i pole `top` identyczne). `antS` = rozmiar, `antW` = grubość gałęzi, `earT` = grubość płaskownika.
 * Kąty: `earTilt` (na zewnątrz, standard 14°), **`earPitch`** (do przodu +, do tyłu −; obrót ramki wokół osi a, `mount_frame(side, P0, tilt, pitch)`; 0 = dawna ramka), kąt odnóg `antAng`
   i kąt bocznych uszu `leafAng` (od pionu).
-* Boczne ucho-liść (`parts.leaf_flat`, `shapes.head_port`): przytopione do głowy w punkcie pod kątem `leafPos` od czubka, ostry czubek, bez owalu, grubość `leafT` (ramka: y = T/2 − 2,5, czyli ucho leży symetrycznie względem y = 0).
+* Boczne ucho-liść (`parts.leaf_flat`, `shapes.head_port`): przytopione do głowy w punkcie pod kątem `leafPos` od czubka, ostry czubek, bez owalu, grubość `leafT`. Ucho leży **przed porożem**
+  (y mniejsze): jego tylna ścianka ma odstęp `leafGap` (domyślnie 1 mm) od przedniej ścianki płaskownika poroża (`y = Y0 + 2,5 − earT − leafGap − leafT/2` to środek grubości ucha), więc ucho i poroże
+  nie stykają się poza głową, a w rzucie z przodu ucho może zasłaniać podstawę poroża jak na zdjęciu. Bez `leafGap` w parametrach (dawne wywołania) ucho leży symetrycznie względem y = 0 (ramka: y = T/2 − 2,5).
+  Kontrola: `renifer_kregiel.ear_antler_clearance` liczy najmniejszy odstęp ucho–poroże poza głową (EDT na siatce 0,25 mm; wymagane ≥ 0,6 mm; `build` i `verify_all`), a podgląd ostrzega („Ucho dotyka poroża”),
+  gdy kąt poroża do przodu (`earPitch`) lub położenie ucha je zetknie. Kąt poroża `earTilt` ma zakres −20…+40° (minus = do środka), `antIn` zwraca odnogi do środka.
 * Wzór ze zdjęcia: `renifer_kregiel.py` (parametry = suwaki podglądu; `export_line_json.py` eksportuje je do `line.json`, podgląd czyta stamtąd). Buduje `renifer_kregiel_calosc.stl` (poroże i uszy przytopione),
   `renifer_kregiel_korpus.stl` + `renifer_kregiel_poroze_{prawe,lewe}.stl` (poroże wymienne na czopie 5×5×8) i uruchamia `verify_set` (14 kontroli) na **nagim** korpusie bez uszu-liści:
   koperta modelu to bryła obrotowa, więc ucho-liść (element przytopiony) jest poza nią z definicji. Kontrola w `verify_all.py` (sekcja 10).

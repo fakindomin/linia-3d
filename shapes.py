@@ -110,10 +110,17 @@ def bunny_P0(side, p=None, ear_x=None):
 
 
 def head_port(side, p, polar_deg, T=5.5):
-    """punkt na powierzchni glowy pod katem polar_deg od pionu (do bocznych uszy-lisci); y tak, by plaskie ucho grubosci T lezalo symetrycznie
-    wzgledem plaszczyzny y = 0 (ramka mocowania ma poczatek 2,5 mm za P0, wiec y = T/2 - 2,5; dla T = 5,5 daje standardowe y = 0,25)"""
+    """punkt na powierzchni glowy pod katem polar_deg od pionu (do bocznych uszy-lisci). Gdy p ma 'leafGap': ucho lezy PRZED porozem, a jego tylna
+    scianka ma odstep leafGap od przedniej scianki poroza (plaskownik poroza: y od Y0 + 2,5 - earT do Y0 + 2,5), wiec ucho nie dotyka poroza;
+    punkt lezy wtedy na powierzchni glowy w plaszczyznie srodka ucha. Bez 'leafGap' (dawne wywolania): ucho symetrycznie wzgledem y = 0
+    (ramka mocowania ma poczatek 2,5 mm za P0, wiec y = T/2 - 2,5; dla T = 5,5 daje standardowe y = 0,25)"""
     ph = math.radians(polar_deg)
-    return np.array([side * p["headR"] * math.sin(ph), T / 2.0 - 2.5, p["headZ"] + p["headR"] * p["headK"] * math.cos(ph)])
+    rr = p["headR"] * math.sin(ph)
+    z = p["headZ"] + p["headR"] * p["headK"] * math.cos(ph)
+    if "leafGap" in p:
+        yc = Y0 + 2.5 - p["earT"] - p["leafGap"] - T / 2.0           # srodek grubosci ucha
+        return np.array([side * math.sqrt(max(rr * rr - yc * yc, 0.0)), yc + T / 2.0 - 2.5, z])
+    return np.array([side * rr, T / 2.0 - 2.5, z])
 
 
 # ---------- jajko (czapka) ----------

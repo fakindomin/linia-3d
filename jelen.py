@@ -52,22 +52,22 @@ def ell_dir(P, c, u, a, b, t):
 
 def design(P):
     """pole odleglosci (ujemne w srodku) w jednostkach projektu (wysokosc ok. 50)"""
-    D = ell(P, (-1.5, 0, 18.5), (15.0, 12.5, 11.5))                          # tulow
-    D = smin(D, ell(P, (7.5, 0, 21.0), (9.5, 10.5, 10.5)), 5 * SM)           # barki
-    D = smin(D, ell(P, (-9.5, 0, 19.0), (8.5, 11.0, 10.0)), 5 * SM)          # zad
-    D = smin(D, cap(P, (5.0, 0, 22.0), (11.5, 0, 31.5), 7.4, 6.6), 4.5 * SM)   # szyja (gruba i krotka, glowa wyraznie nad barkami)
-    D = smin(D, ell(P, (13.5, 0, 33.0), (9.2, 8.2, 8.2)), 3.5 * SM)            # glowa
+    D = ell(P, (-1.5, 0, 18.8), (14.5, 10.6, 10.4))                          # tulow
+    D = smin(D, ell(P, (7.5, 0, 21.0), (9.0, 9.2, 9.6)), 5 * SM)           # barki
+    D = smin(D, ell(P, (-9.5, 0, 19.3), (8.2, 9.6, 9.2)), 5 * SM)          # zad
+    D = smin(D, cap(P, (5.0, 0, 22.0), (11.5, 0, 31.5), 6.6, 6.0), 4.5 * SM)   # szyja (gruba i krotka, glowa wyraznie nad barkami)
+    D = smin(D, ell(P, (13.5, 0, 33.0), (9.0, 7.6, 7.9)), 3.5 * SM)            # glowa
     D = smin(D, cap(P, (18.8, 0, 31.0), (24.4, 0, 29.4), 5.0, 3.9), 3 * SM)  # pysk
     D = smin(D, ell(P, (24.6, 0, 29.6), (2.5, 2.5, 2.3)), 1.5 * SM)          # nos
     D = smin(D, ell(P, (-17.5, 0, 22.0), (3.0, 2.6, 3.2)), 2.5 * SM)         # ogon
     for s in (-1.0, 1.0):
         # nogi: krotkie, grube kolki, stopy ok. o 7,4 mm
-        D = smin(D, cap(P, (8.5, s * 6.5, 15.0), (9.5, s * 7.2, 0.0), 4.8, 3.7), 4 * SM)
-        D = smin(D, cap(P, (-9.0, s * 7.0, 15.0), (-10.0, s * 7.8, 0.0), 4.9, 3.8), 4 * SM)
+        D = smin(D, cap(P, (8.5, s * 5.6, 15.0), (9.5, s * 6.2, 0.0), 4.5, 3.6), 4 * SM)
+        D = smin(D, cap(P, (-9.0, s * 6.0, 15.0), (-10.0, s * 6.8, 0.0), 4.6, 3.7), 4 * SM)
         # uszy: plaskie "skrzydelka" w gore i na boki (nawis ok. 39 st. od poziomu)
-        D = smin(D, ell_dir(P, (10.8, s * 11.4, 37.2), (-0.20, s * 0.765, 0.628), 6.6, 3.9, 1.8), 2.5 * SM)
+        D = smin(D, ell_dir(P, (10.8, s * 10.8, 37.2), (-0.20, s * 0.765, 0.628), 6.6, 3.9, 1.8), 2.5 * SM)
         # poroze: gruba galaz + 2 odnogi w polowie + 2 koncowki (wszystko pod katem >= 40 st. od poziomu)
-        B0 = np.array((12.5, s * 4.4, 38.5)); B1 = np.array((12.0, s * 18.4, 49.5))
+        B0 = np.array((12.5, s * 4.0, 38.5)); B1 = np.array((12.0, s * 18.4, 49.5))
         M = B0 + 0.45 * (B1 - B0)
         D = smin(D, cap(P, B0, B1, 2.7, 2.1), 1.8 * SM)
         D = smin(D, cap(P, M, M + np.array((6.0, s * 2.2, 6.2)), 2.1, 1.6), 1.6 * SM)       # odnoga do przodu

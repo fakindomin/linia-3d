@@ -101,10 +101,10 @@ def design(P):
 NAWIS_ANG = 55.0     # kat zbocza od PIONU, do ktorego naprawiamy nawisy (55 st. -> kazde zbocze w dol >= 35 st. od poziomu; prog slicera u nas 25 st.)
 
 
-def build(S=1.0, vox=VOX, name="jelen_stojacy.stl", target=250000, fn=None, note="jelen stojacy, gladki, 50 mm", fix=True, box=(-25.0, 31.0, -26.0, 26.0)):
+def build(S=1.0, vox=VOX, name="jelen_stojacy.stl", target=250000, fn=None, note="jelen stojacy, gladki, 50 mm", fix=True, box=(-25.0, 31.0, -26.0, 26.0), zhi=56.0):
     """S = skala projektu -> mm; siatka w mm, pola liczone na (x/S, y/S, z/S) i mnozone przez S; fix = naprawa nawisow (nawisy.py: klin pod brzuchem i pyskiem);
-    box = (xlo, xhi, ylo, yhi) siatki w jednostkach projektu (szerszy dla glowy obroconej w bok)"""
-    axes, (X, Y, Z) = make_grid(box[0] * S, box[1] * S, box[2] * S, box[3] * S, -0.6, 56.0 * S, vox)
+    box = (xlo, xhi, ylo, yhi) i zhi = gorna granica siatki w jednostkach projektu (szersza dla glowy obroconej w bok, wyzsza dla dlugiej szyi)"""
+    axes, (X, Y, Z) = make_grid(box[0] * S, box[1] * S, box[2] * S, box[3] * S, -0.6, zhi * S, vox)
     D = (fn or design)((X / S, Y / S, Z / S)) * S
     F = (-D).astype(np.float32)
     if fix:                                                         # naprawa nawisow na calym polu (takze pod stolem), dopiero potem dno

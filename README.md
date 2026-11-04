@@ -39,6 +39,8 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `jelen_glowa90.py` | jeleń stojący z głową obróconą w bok (`TURN` = 90°, oś `PIVOT` na końcu szyi): ten sam tułów, nogi i skala, głowa/uszy/poroże obrócone; `build(..., box=...)` z szerszą siatką |
 | `jelen_chudy.py` | jeleń stojący „chudy”: proporcje bliżej wzorca DEER 1 (tułów węższy i niższy, nogi rozstawione szerzej, długa cienka szyja, głowa wyżej i uniesiona); skala z wysokości 50 mm (dwa przebiegi, `S` ≈ 0,82); ta sama głowa, uszy i poroże |
 | `jelen_lezacy.py` | jeleń leżący (tułów na stole, przednie nogi wysunięte); te same kontrole |
+| `jelen_siedzacy_chudy.py` | jeleń siedzący „chudy”: węższy tułów, piersi i uda, cieńsze nogi, dłuższa cienka szyja, głowa wyżej i uniesiona; skala `S_CH` (głowa jak w `jelen_chudy.py`), 37 × 35 × 45 mm, 0 mm² nawisu i 0 wysp |
+| `jelen_lezacy_chudy.py` | jeleń leżący „chudy”: węższy tułów, zad i nogi, dłuższa cienka szyja, głowa wyżej i uniesiona; skala `S_CH`, 38 × 35 × 41 mm, 0 mm² nawisu i 0 wysp |
 | `nawisy.py` | pod druk bez podpór: `carve` (od dołu: każda warstwa wystaje najwyżej o stały skos, nic nie wisi w powietrzu, brzuch = namiot z nóg, spód pyska rośnie ku nosowi) i `slicer_overhang` (miara jak w Bambu: warstwa 0,2, progi 25–40°, prawdziwe wyspy) |
 | `choinka_miska.py` | miska-choinka wg „Plätzchen-Schalen”: wierny obrys oryginału w skali 1,0 i 0,8, wariant gładki ze wszystkimi krawędziami zaokrąglonymi (plan, brzeg, dno); parametry w nagłówku (promienie, ścianka, skos) |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |

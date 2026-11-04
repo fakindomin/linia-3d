@@ -7,7 +7,7 @@ import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from jelen import smin, cap, ell, glowa, uszy_poroze, head_xf, build, checks, HEIGHT, SM
 
-S_CH = 0.84                    # skala projektu -> mm (ustawiana tak, by wysokosc = 50 mm; sprawdzana w przebiegu 2)
+S_CH = 0.8202                  # skala projektu -> mm (daje wysokosc 50 mm; sprawdzana w przebiegu 2; wersja ze skreconym lbem uzywa tej samej skali)
 HEAD_PITCH = 22.0              # glowa uniesiona (pysk do gory) o tyle stopni wokol konca szyi: spod pyska rosnie ku nosowi, jak we wzorcu
 PIVOT = (9.0, 36.5)            # os obrotu glowy (x, z) = koniec szyi
 HEAD_DX, HEAD_DZ = -3.0, 7.2   # przesuniecie glowy wzgledem jelen.py: wyzej (dluga szyja) i do tylu (pysk nie wystaje dalej niz we wzorcu)
@@ -19,9 +19,18 @@ NECK = ((6.0, 0.0, 19.0), (9.0, 0.0, 36.5), 6.4, 4.6)       # dluga cienka szyja
 LEG_X, LEG_Y_TOP, LEG_Y_FOOT, LEG_R = 10.8, 6.6, 8.0, (4.2, 3.7)   # nogi: rozstaw przod-tyl +-LEG_X, na boki od LEG_Y_TOP (u gory) do LEG_Y_FOOT (stopy)
 
 
-def design(P):
+def yaw(P, turn, pivot_x=PIVOT[0]):
+    """punkt swiata -> uklad glowy nieskreconej: obrot odwrotny o 'turn' st. wokol pionu przez (pivot_x, 0), dodatni = glowa w lewo (pysk w strone +y)"""
     X, Y, Z = P
-    Ph = head_xf(P, HEAD_DX, HEAD_DZ, HEAD_PITCH, PIVOT)
+    a = math.radians(turn); c, sn = math.cos(a), math.sin(a)
+    dx = X - pivot_x
+    return (pivot_x + c * dx + sn * Y, -sn * dx + c * Y, Z)
+
+
+def design(P, turn=0.0):
+    """turn = skret glowy [st.] wokol pionu przez koniec szyi (0 = glowa na wprost)"""
+    X, Y, Z = P
+    Ph = head_xf(yaw(P, turn) if turn else P, HEAD_DX, HEAD_DZ, HEAD_PITCH, PIVOT)
     D = ell(P, BODY["c"], BODY["r"])
     D = smin(D, ell(P, SHOULD["c"], SHOULD["r"]), 4.0 * SM)
     D = smin(D, ell(P, RUMP["c"], RUMP["r"]), 4.0 * SM)

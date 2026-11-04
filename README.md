@@ -35,6 +35,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `jelen.py` | jeleń stojący (gładki, „zabawkowy”: gruby tułów, duża głowa, krótkie grube nogi, zbite szerokie poroże), 50 mm, z pól odległości; kontrole: wysokość, szczelność, środek masy nad podstawą, stopy ≥ 100 mm², nawisy (powierzchniowe i warstwowe jak slicer), elementy < 2 mm |
 | `jelen_siedzacy.py` | jeleń siedzący: ta sama głowa, uszy, poroże i skala co `jelen.py` (`S_STD`), inny tułów; te same kontrole (w tym nawisy jak slicer) |
 | `jelen_jelonek.py` | jelonek: ta sama głowa i skala, mały tułów, krótkie nogi, większe uszy, paczki zamiast poroża |
+| `jelen_chudy_glowa90.py` | jeleń stojący chudy ze skręconą głową (`TURN` = 90°, `jelen_chudy.design(P, turn=...)`): to samo ciało, szyja i skala co `jelen_chudy.py`, głowa z uszami i porożem obrócona wokół pionu przez koniec szyi |
 | `jelen_glowa90.py` | jeleń stojący z głową obróconą w bok (`TURN` = 90°, oś `PIVOT` na końcu szyi): ten sam tułów, nogi i skala, głowa/uszy/poroże obrócone; `build(..., box=...)` z szerszą siatką |
 | `jelen_chudy.py` | jeleń stojący „chudy”: proporcje bliżej wzorca DEER 1 (tułów węższy i niższy, nogi rozstawione szerzej, długa cienka szyja, głowa wyżej i uniesiona); skala z wysokości 50 mm (dwa przebiegi, `S` ≈ 0,82); ta sama głowa, uszy i poroże |
 | `jelen_lezacy.py` | jeleń leżący (tułów na stole, przednie nogi wysunięte); te same kontrole |

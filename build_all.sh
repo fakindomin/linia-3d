@@ -25,6 +25,7 @@ python3 jelen_siedzacy.py          # jelen_siedzacy.stl (ta sama glowa i skala c
 python3 jelen_jelonek.py           # jelen_jelonek.stl
 python3 jelen_lezacy.py            # jelen_lezacy.stl
 python3 jelen_chudy.py             # jelen_stojacy_chudy.stl (proporcje wg wzorca: chudszy, nogi szerzej, dluga szyja)
+python3 jelen_chudy_glowa90.py     # jelen_stojacy_chudy_glowa90.stl (chudy ze skreconym lbem)
 python3 jelen_glowa90.py           # jelen_stojacy_glowa90.stl (glowa obrocona o 90 st.)
 python3 jelen.py                    # jelen_stojacy.stl (50 mm, gladki): kontrole wysokosci, srodka masy, stop, nawisow (naprawa nawisow: nawisy.py)
 python3 choinka_miska.py            # choinka_miska_100/80 (gladka, krawedzie zaokraglone): kontrola wymiarow, scianek, gladkosci i miejsca na stole (ok. 5 min)

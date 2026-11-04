@@ -184,6 +184,15 @@ Głowę podnosi/opuszcza `headZ`; w trybie sylwetki szyja idzie razem z nią (`n
   rasteryzacja JS i PIL różni się do ~0,4 mm na zaokrąglonych złączach, więc tolerancja jest 2D ≤ 0,45 mm i zero punktów po przeciwnych stronach powierzchni z zapasem), a `--print` eksportuje 6 skrajnych wariantów
   (głowa wysoko, poroże 5 poziomów z kątami, wymienne, nisko, szeroki, wąska talia) i puszcza je przez `verify_print.py`.
 
+## 9b. Miska-choinka do okręgu (`choinka_miska.py`)
+
+* Oryginał (płaski obrys 105 × 142 mm, piętra z poziomymi półkami, ścianki skośne ok. 15°, dno 1,2 mm) ma kąt rozwarcia ok. 41°, więc 6 sztuk w okręgu zostawia klinowe pustki (pasuje 9 szt.). Wersja linii poszerza **tylko kąt**: narożnik każdego piętra leży na linii klina 360/N (dla N = 6: 60°), więc sąsiadki stykają się narożnikami (szczelina `GAP` = 1,2 mm), a między piętrami zostają strzałkowate okienka.
+* Obrys: skosy pięter mają kąt `BETA` = 40° od osi (półki ≈ 8,5 mm jak w oryginale 8,8), czubek leży `r0` ≈ 20 mm od środka koła (otwór ≈ Ø 40), pień na zewnątrz. Zależność jest dokładna: półka = (tg β − tg 30°) · wysokość piętra, `r0` z pierwszego piętra.
+* Wzór działa dla każdego N ≥ 6 (sprawdzone N = 6…12, zero nachodzenia, szczelina dokładnie `GAP`; styk punktowy na narożnikach, więc N może być nieparzyste). N = 9 z `BETA` = 30° i `SCALE` = 1,0 odtwarza oryginał prawie 1:1 (112 × 137 mm, półki 8,1 mm).
+* Bryła: pole odległości ze znakiem do obrysu na brzegu (`poly_sdf_rib`), cofnięcie `d(z) = (H − z)·tg 15°`, wnęka = obrys cofnięty o ściankę, dno 1,2 mm, brzeg płaski. Wariant żebrowany: standardowe żebra (±0,8, rozstaw ≈ 3,4 mm, całkowita liczba na każdej krawędzi, szczyty na wierzchołkach), zanik żeber 0,8 → 3 mm od wierzchołków (ostre narożniki pięter zostają pełne i stykają się z sąsiadką), ścianka w szczycie 2,6 mm, w dolince 1,1 mm (≥ 0,8). Wariant gładki: ścianka 1,6 mm.
+* Kontrole w skrypcie (na gotowym STL, kod wyjścia 1 przy błędzie): pierścień 6 szt. (przekrój tuż pod brzegiem, 6 kopii obróconych o 60°: zero nachodzenia, najmniejsza szczelina 0,85–2,8 mm; ostre narożniki zaokrąglają się o ok. 0,5 mm), ścianka ≥ 0,9 mm na 4 wysokościach, pojemność wnęki (≈ 122 ml żebrowana, 130 ml gładka). Plik `out/choinka_pierscien.png` pokazuje układ 6 szt.
+* Uwaga: pełna `verify_print.py` bez `--fast` dla żebrowanej miski potrzebuje ok. 6 GB RAM (kontrola ścianek wnęk i samoprzecięć naraz); osobno obie kontrole przechodzą. Podgląd w przeglądarce dla tej miski jeszcze nie istnieje.
+
 ## 10. Pliki
 
 Żebra (19 + 4 renifer kręgiel: `renifer_kregiel_calosc/korpus/poroze_prawe/poroze_lewe`): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
@@ -192,4 +201,5 @@ Lowpoly (19): te same nazwy z prefiksem `lp_` (np. `lp_krolik_calosc.stl`, `lp_b
 
 Skrypty: `standard.py`, `models.py`, `lp.py`, `lp_parts.py`, `meshclean.py` + `clean_stl.py` (czyszczenie mikro-trójkątów), `verify_print.py` (kontrola druku), `build_std_lowpoly.py` (wszystkie lp_*.stl), `build_std_ribbed_parts.py` (części żebrowane),
 `build_egg.py` + `build_dlugie.py` (czapki jajka), `build_figurki.py`/`build_pumpkin.py`/`build_snowman.py` (korpusy żebrowane), `renifer_kregiel.py` (renifer z parametrami wzoru), `verify_all.py`, `new_model_template.py`.
+Miska-choinka: `choinka_miska.py` (`choinka_miska_zebra.stl`, `choinka_miska_gladka.stl`).
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.

@@ -13,6 +13,7 @@ pip install -r requirements.txt
 python3 new_model_template.py     # demo „gruszka” w obu stylach + kontrola (31 PASS), pliki w out_demo/
 python3 build_std_lowpoly.py      # 19 plików lp_*.stl (kilka sekund)
 python3 renifer_kregiel.py        # renifer „kręgiel”: całość, korpus z gniazdami, poroże wymienne + verify_set (ok. 30 s)
+python3 choinka_miska.py          # miska-choinka do okręgu 6 szt. (żebrowana i gładka) + kontrola pierścienia (ok. 20 s)
 ./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
 python3 verify_all.py             # 217 kontroli standardu na gotowych plikach out/*.stl
 python3 verify_print.py out/      # szczelność i poprawność druku każdego STL (dziury, zdegenerowane, samoprzecięcia, ścianki; ok. 2 min)
@@ -31,6 +32,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `lp.py`, `lp_parts.py` | rdzeń lowpoly (pierścienie, boolean przez manifold3d, liść, poroże) |
 | `build_*.py`, `ears_A.py` | skrypty budujące STL (kolejność w `build_all.sh`) |
 | `renifer_kregiel.py` | renifer z parametrami wzoru (sylwetka z punktów: podstawa, brzuch, barki, szyja, głowa; poroże N poziomów z odnogami do środka, uszy-liście); parametry = suwaki i punkty na rysunku w podglądzie |
+| `choinka_miska.py` | miska-choinka z piętrami (wg „Plätzchen-Schalen”) pod okrąg 6 szt.: narożniki pięter na liniach klinów 60°, szczelina 1,2 mm; parametry w nagłówku (N, skala, kąt skosu, szczelina, ścianki) |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |
 | `meshclean.py`, `clean_stl.py` | usuwanie mikro-trójkątów bez otwierania siatki (wpięte w `lib.save`); `clean_stl.py` czyści istniejące pliki |

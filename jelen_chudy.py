@@ -2,24 +2,26 @@
 dluga i cienka szyja unoszaca glowe; glowa, uszy i poroze (te same funkcje) jak w jelen.py. Skala S liczona z wysokosci 50 mm (dwa przebiegi).
 Uklad: x = przod, y = bok, z = gora; z = 0 to stol.
   python3 jelen_chudy.py          -> out/jelen_stojacy_chudy.stl"""
-import sys, time
+import sys, math, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from jelen import smin, cap, ell, glowa, uszy_poroze, build, checks, HEIGHT, SM
+from jelen import smin, cap, ell, glowa, uszy_poroze, head_xf, build, checks, HEIGHT, SM
 
 S_CH = 0.84                    # skala projektu -> mm (ustawiana tak, by wysokosc = 50 mm; sprawdzana w przebiegu 2)
+HEAD_PITCH = 22.0              # glowa uniesiona (pysk do gory) o tyle stopni wokol konca szyi: spod pyska rosnie ku nosowi, jak we wzorcu
+PIVOT = (9.0, 36.5)            # os obrotu glowy (x, z) = koniec szyi
 HEAD_DX, HEAD_DZ = -3.0, 7.2   # przesuniecie glowy wzgledem jelen.py: wyzej (dluga szyja) i do tylu (pysk nie wystaje dalej niz we wzorcu)
 # --- tulow (jednostki projektu) ---
-BODY = dict(c=(0.0, 0.0, 16.0), r=(13.0, 9.7, 8.8))        # glowna elipsoida tulowia: szczuply, nizszy
-SHOULD = dict(c=(8.0, 0.0, 17.0), r=(7.0, 8.8, 8.2))
-RUMP = dict(c=(-8.0, 0.0, 16.5), r=(6.8, 9.2, 8.0))
+BODY = dict(c=(0.0, 0.0, 14.3), r=(13.0, 9.7, 10.5))       # glowna elipsoida tulowia: szczuply; dol nisko (dolna czesc i tak obcina nawisy.carve: namiot miedzy nogami)
+SHOULD = dict(c=(8.0, 0.0, 15.5), r=(7.0, 8.8, 9.7))
+RUMP = dict(c=(-8.0, 0.0, 15.0), r=(6.8, 9.2, 9.5))
 NECK = ((6.0, 0.0, 19.0), (9.0, 0.0, 36.5), 6.4, 4.6)       # dluga cienka szyja, prawie pionowa
 LEG_X, LEG_Y_TOP, LEG_Y_FOOT, LEG_R = 10.8, 6.6, 8.0, (4.2, 3.7)   # nogi: rozstaw przod-tyl +-LEG_X, na boki od LEG_Y_TOP (u gory) do LEG_Y_FOOT (stopy)
 
 
 def design(P):
     X, Y, Z = P
-    Ph = (X - HEAD_DX, Y, Z - HEAD_DZ)
+    Ph = head_xf(P, HEAD_DX, HEAD_DZ, HEAD_PITCH, PIVOT)
     D = ell(P, BODY["c"], BODY["r"])
     D = smin(D, ell(P, SHOULD["c"], SHOULD["r"]), 4.0 * SM)
     D = smin(D, ell(P, RUMP["c"], RUMP["r"]), 4.0 * SM)

@@ -4,14 +4,14 @@ tylne zgiete po bokach zadu), szyja wyprostowana. Uklad: x = przod, y = bok, z =
 import sys, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from jelen import smin, cap, ell, glowa, uszy_poroze, build, checks, S_STD, SM
+from jelen import smin, cap, ell, glowa, uszy_poroze, head_xf, build, checks, S_STD, SM
 
 HEAD_DX, HEAD_DZ = 0.0, -8.5      # glowa nizej niz u stojacego
 
 
 def design(P):
     X, Y, Z = P
-    Ph = (X - HEAD_DX, Y, Z - HEAD_DZ)                                         # wspolrzedne glowy (glowa, uszy i poroze jak w jelen.py)
+    Ph = head_xf(P, HEAD_DX, HEAD_DZ, pivot=(11.5, 23.0))                      # wspolrzedne glowy (glowa, uszy i poroze jak w jelen.py), pysk uniesiony
     D = ell(P, (-2.0, 0, 6.6), (15.0, 10.2, 8.2))                              # tulow (splaszczony przez stol -> duza plama styku)
     D = smin(D, ell(P, (7.0, 0, 9.5), (8.5, 9.0, 8.5)), 5 * SM)                # piers
     D = smin(D, ell(P, (-9.5, 0, 7.0), (8.0, 9.8, 7.2)), 5 * SM)               # zad

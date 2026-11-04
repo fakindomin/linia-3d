@@ -4,7 +4,7 @@ wokol pionowej osi na koncu szyi. Uklad: x = przod, y = lewo, z = gora; z = 0 to
 import sys, math, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from jelen import smin, cap, ell, glowa, uszy_poroze, build, checks, S_STD, SM
+from jelen import smin, cap, ell, glowa, uszy_poroze, head_xf, build, checks, S_STD, SM, HEAD_PITCH
 
 TURN = 90.0                 # obrot glowy [st.], dodatni = w lewo (pysk w strone +y)
 PIVOT = (10.5, 0.0)         # os obrotu glowy (pion przez koniec szyi), jednostki projektu
@@ -15,13 +15,13 @@ def head_coords(P, turn=TURN, pivot=PIVOT):
     X, Y, Z = P
     a = math.radians(turn); c, s = math.cos(a), math.sin(a)
     dx, dy = X - pivot[0], Y - pivot[1]
-    return (pivot[0] + c * dx + s * dy, pivot[1] - s * dx + c * dy, Z)
+    return head_xf((pivot[0] + c * dx + s * dy, pivot[1] - s * dx + c * dy, Z), 0.0, 0.0, HEAD_PITCH, (11.5, 31.5))     # obrot w bok, potem uniesienie pyska
 
 
 def design(P):
     X, Y, Z = P
     Ph = head_coords(P)
-    D = ell(P, (-1.5, 0, 18.8), (14.5, 10.6, 10.4))                          # tulow
+    D = ell(P, (-1.5, 0, 17.4), (14.5, 10.6, 11.8))                          # tulow (dol nisko: nawisy.carve robi z niego namiot miedzy nogami)
     D = smin(D, ell(P, (7.5, 0, 21.0), (9.0, 9.2, 9.6)), 5 * SM)           # barki
     D = smin(D, ell(P, (-9.5, 0, 19.3), (8.2, 9.6, 9.2)), 5 * SM)          # zad
     D = smin(D, cap(P, (5.0, 0, 22.0), (11.5, 0, 31.5), 6.6, 6.0), 4.5 * SM)   # szyja

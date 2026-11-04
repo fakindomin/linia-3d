@@ -4,7 +4,7 @@ Uklad: x = przod, y = bok, z = gora; z = 0 to stol.
 import sys, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from jelen import smin, cap, ell, glowa, uszy, build, checks, S_STD, SM
+from jelen import smin, cap, ell, glowa, uszy, head_xf, build, checks, S_STD, SM
 
 HEAD_DX, HEAD_DZ = -2.0, -7.5     # glowa nizej i blizej tulowia niz u stojacego (szyja krotka)
 LIFT = 2.0                        # tulow, glowa i uszy podniesione nad stol (dluzsze nogi): klin pod brzuchem (nawisy.py) nie dotyka stolu
@@ -15,7 +15,8 @@ BUDS = True                       # male paczki poroza (False = bez poroza)
 def design(P):
     X, Y, Z0 = P
     Z = Z0 - LIFT                                                              # wspolrzedne tulowia (podniesionego o LIFT)
-    P, Ph = (X, Y, Z), (X - HEAD_DX, Y, Z - HEAD_DZ)                           # Ph: wspolrzedne glowy (ta sama glowa i uszy co w jelen.py)
+    P = (X, Y, Z)
+    Ph = head_xf(P, HEAD_DX, HEAD_DZ, pivot=(9.5, 24.0))                       # Ph: wspolrzedne glowy (ta sama glowa i uszy co w jelen.py), pysk uniesiony
     D = ell(P, (-1.0, 0, 13.8), (11.5, 8.8, 8.8))                              # tulow (maly)
     D = smin(D, ell(P, (5.5, 0, 15.5), (7.5, 7.8, 8.0)), 4.5 * SM)             # barki
     D = smin(D, ell(P, (-7.0, 0, 14.0), (6.8, 8.0, 7.8)), 4.5 * SM)            # zad

@@ -60,6 +60,18 @@ def glowa(D, P):
     return D
 
 
+HEAD_PITCH = 22.0    # domyslne uniesienie glowy (pysk do gory) [st.]: spod pyska rosnie ku nosowi (>= 32 st.), wiec nic nie wisi w powietrzu
+
+
+def head_xf(P, dx=0.0, dz=0.0, pitch=HEAD_PITCH, pivot=(11.5, 31.5)):
+    """punkt swiata -> uklad glowy (ten sam ksztalt glowy/uszu/poroza we wszystkich pozycjach): obrot o -pitch wokol osi y przez pivot = (x, z) konca szyi
+    (glowa unosi pysk), potem przesuniecie glowy o (dx, dz)"""
+    X, Y, Z = P
+    a = math.radians(pitch); c, sn = math.cos(a), math.sin(a)
+    ddx, ddz = X - pivot[0], Z - pivot[1]
+    return (pivot[0] + c * ddx + sn * ddz - dx, Y, pivot[1] - sn * ddx + c * ddz - dz)
+
+
 def uszy(D, P, s, k=1.0):
     """ucho jednej strony (s = -1 / +1): plaskie "skrzydelko" w gore i na boki (nawis ok. 39 st. od poziomu); k = skala wielkosci (jelonek 1,2)"""
     return smin(D, ell_dir(P, (10.8, s * 10.8, 37.2), (-0.20, s * 0.765, 0.628), 6.6 * k, 3.9 * k, 1.8 * k), 2.5 * SM)
@@ -84,33 +96,32 @@ def uszy_poroze(D, P, s):
 
 def design(P):
     """pole odleglosci (ujemne w srodku) w jednostkach projektu (wysokosc ok. 50)"""
-    D = ell(P, (-1.5, 0, 18.8), (14.5, 10.6, 10.4))                          # tulow
+    D = ell(P, (-1.5, 0, 17.4), (14.5, 10.6, 11.8))                          # tulow (dol nisko: nawisy.carve robi z niego namiot miedzy nogami)
     D = smin(D, ell(P, (7.5, 0, 21.0), (9.0, 9.2, 9.6)), 5 * SM)           # barki
     D = smin(D, ell(P, (-9.5, 0, 19.3), (8.2, 9.6, 9.2)), 5 * SM)          # zad
     D = smin(D, cap(P, (5.0, 0, 22.0), (11.5, 0, 31.5), 6.6, 6.0), 4.5 * SM)   # szyja (gruba i krotka, glowa wyraznie nad barkami)
-    D = glowa(D, P)
+    D = glowa(D, head_xf(P, 0.0, 0.0, HEAD_PITCH, (11.5, 31.5)))             # glowa z uniesionym pyskiem
     D = smin(D, ell(P, (-17.5, 0, 22.0), (3.0, 2.6, 3.2)), 2.5 * SM)         # ogon
     for s in (-1.0, 1.0):
         # nogi: krotkie, grube kolki, stopy ok. o 7,4 mm
         D = smin(D, cap(P, (8.5, s * 5.6, 15.0), (9.5, s * 6.2, 0.0), 4.5, 3.6), 4 * SM)
         D = smin(D, cap(P, (-9.0, s * 6.0, 15.0), (-10.0, s * 6.8, 0.0), 4.6, 3.7), 4 * SM)
-        D = uszy_poroze(D, P, s)
+        D = uszy_poroze(D, head_xf(P, 0.0, 0.0, HEAD_PITCH, (11.5, 31.5)), s)
     return D
 
 
-NAWIS_ANG = 55.0     # kat zbocza od PIONU, do ktorego naprawiamy nawisy (55 st. -> kazde zbocze w dol >= 35 st. od poziomu; prog slicera u nas 25 st.)
+NAWIS_ANG = 58.0     # kat zbocza od PIONU, do ktorego naprawiamy nawisy (58 st. -> kazde zbocze w dol >= 32 st. od poziomu; prog slicera u nas 25 st.)
 
 
 def build(S=1.0, vox=VOX, name="jelen_stojacy.stl", target=250000, fn=None, note="jelen stojacy, gladki, 50 mm", fix=True, box=(-25.0, 31.0, -26.0, 26.0), zhi=56.0):
-    """S = skala projektu -> mm; siatka w mm, pola liczone na (x/S, y/S, z/S) i mnozone przez S; fix = naprawa nawisow (nawisy.py: klin pod brzuchem i pyskiem);
+    """S = skala projektu -> mm; siatka w mm, pola liczone na (x/S, y/S, z/S) i mnozone przez S; fix = obciecie nawisow od dolu (nawisy.carve: brzuch jako namiot miedzy nogami, spod pyska rosnie ku nosowi);
     box = (xlo, xhi, ylo, yhi) i zhi = gorna granica siatki w jednostkach projektu (szersza dla glowy obroconej w bok, wyzsza dla dlugiej szyi)"""
     axes, (X, Y, Z) = make_grid(box[0] * S, box[1] * S, box[2] * S, box[3] * S, -0.6, zhi * S, vox)
     D = (fn or design)((X / S, Y / S, Z / S)) * S
-    F = (-D).astype(np.float32)
-    if fix:                                                         # naprawa nawisow na calym polu (takze pod stolem), dopiero potem dno
+    F = smin(-D, Z, 0.5).astype(np.float32)                        # plaskie dno, zaokraglona krawedz stop
+    if fix:                                                        # obciecie nawisow od dolu: nic nie wisi w powietrzu (nawisy.carve)
         import nawisy
-        F = nawisy.repair(F, vox, axes[2], ang=NAWIS_ANG, zmin=-1.0)
-    F = smin(F, Z, 0.5).astype(np.float32)                         # plaskie dno, zaokraglona krawedz stop
+        F = nawisy.carve(F, vox, axes[2], ang=NAWIS_ANG, zmin=0.0)
     return finish(F, axes, vox, name, note, target=target)
 
 
@@ -156,8 +167,8 @@ def checks(m, label="jelen", height=HEIGHT, min_feet=100.0):
     h = float(m.extents[2])
     c1 = height is None or abs(h - height) <= 0.3
     nz = m.face_normals[:, 2]; A = m.area_faces; zc = m.triangles_center[:, 2]
-    ov = float(A[(nz < -math.sin(math.radians(55))) & (zc > 0.5)].sum())   # powierzchnie zwrocone w dol bardziej niz 55 st. od pionu
-    ov45 = float(A[(nz < -math.sin(math.radians(45))) & (zc > 0.5)].sum())  # to samo dla 45 st. (porownanie z DEER 1: 341 mm2)
+    ov = float(A[(nz < -math.cos(math.radians(25))) & (zc > 0.5)].sum())   # powierzchnie zboczone < 25 st. od poziomu (prog Bambu u Dominika)
+    ov45 = float(A[(nz < -math.cos(math.radians(32))) & (zc > 0.5)].sum())  # < 32 st. od poziomu (granica obciecia nawisy.carve, 58 st. od pionu)
     sl = m.section(plane_origin=[0, 0, 0.4], plane_normal=[0, 0, 1])
     polys = [p[:, :2] for p in sl.discrete if len(p) >= 4]
     from shapely.geometry import Polygon
@@ -176,13 +187,13 @@ def checks(m, label="jelen", height=HEIGHT, min_feet=100.0):
     print(f"  nawis wg warstw (jak slicer, 55 st.): suma {ovl:.0f} mm2, najszersze niepodparte miejsce {ovw:.1f} mm na z = {ovz:.1f} mm (wymog <= 4,0 = wzorzec: {'ok' if c5 else 'ZLE'})")
     import nawisy
     sl = {t: nawisy.slicer_overhang(m, 0.2, t) for t in (25, 30, 35)}      # prog zbocza od poziomu: 25 = ustawienie Bambu u Dominika
-    c6 = sl[25]["area"] <= 8.0 and sl[25]["floating"] <= 5.0 and sl[30]["area"] <= 10.0     # wzorzec DEER 3 (bez podpor): 1 / 2 mm2; DEER 1 i 2 maja 27-47 mm2 wysp
-    print("  nawis jak w Bambu (warstwa 0,2; prog zbocza od poziomu): " + " | ".join(f"{t} st.: {v['area']:.0f} mm2, wyspy {v['floating']:.1f}" for t, v in sl.items())
-          + f" (wymog 25 st. <= 8 mm2 i wyspy <= 5, 30 st. <= 10 mm2: {'ok' if c6 else 'ZLE'})")
+    c6 = sl[25]["area"] <= 8.0 and sl[25]["floating"] <= 0.5 and sl[30]["area"] <= 10.0     # wzorzec: DEER 1 / 2 / 3 maja 47 / 27 / 1 mm2 nawisu i 0 wysp (brzuch to most miedzy nogami)
+    print("  nawis jak w Bambu (warstwa 0,2; prog zbocza od poziomu): " + " | ".join(f"{t} st.: {v['area']:.1f} mm2, wyspy {v['floating']:.1f}" for t, v in sl.items())
+          + f" (wymog 25 st. <= 8 mm2 i wyspy <= 0,5, 30 st. <= 10 mm2: {'ok' if c6 else 'ZLE'})")
     ok = c1 and c2 and c3 and c4 and c5 and c6
     print(f"  {label}: wysokosc {h:.1f} mm ({'ok' if c1 else 'ZLE'}), wymiary {np.round(m.extents, 1).tolist()}, szczelny {m.is_watertight}, srodek masy ({com[0]:.1f}, {com[1]:.1f}, {com[2]:.1f}) "
           f"{'nad podstawa' if c2 else 'POZA podstawa'}")
-    print(f"  stopy lacznie {feet:.0f} mm2 (wymog >= {min_feet:.0f}: {'ok' if c3 else 'ZLE'}), nawis > 55 st.: {ov:.0f} mm2 ({100 * ov / m.area:.1f}% pow.), > 45 st.: {ov45:.0f} mm2, elementy < 2 mm: {thin:.2f}% objetosci ({'ok' if c4 else 'ZLE'}), objetosc {m.volume / 1000:.1f} cm3 -> {'PASS' if ok else 'FAIL'}")
+    print(f"  stopy lacznie {feet:.0f} mm2 (wymog >= {min_feet:.0f}: {'ok' if c3 else 'ZLE'}), zbocza < 25 st. od poziomu: {ov:.0f} mm2 ({100 * ov / m.area:.1f}% pow.), < 32 st.: {ov45:.0f} mm2, elementy < 2 mm: {thin:.2f}% objetosci ({'ok' if c4 else 'ZLE'}), objetosc {m.volume / 1000:.1f} cm3 -> {'PASS' if ok else 'FAIL'}")
     return ok
 
 

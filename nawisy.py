@@ -1,47 +1,40 @@
-"""Nawisy pod druk bez podpor: (1) naprawa pola F (wypelnienie klinem pod plaskimi stropami), (2) pomiar jak slicer (warstwa po warstwie).
+"""Nawisy pod druk bez podpor: (1) obciecie pola F od dolu (carve: nic nie wisi w powietrzu), (2) pomiar jak slicer (warstwa po warstwie).
 Slicer (Bambu / Orca / Prusa) uznaje za nawis te czesc warstwy, ktora wystaje poza warstwe nizej o wiecej niz h / tg(prog) (prog = kat zbocza od POZIOMU,
 w projekcie Dominika support_threshold_angle = 25 st.); wyspa bez niczego pod spodem = 'floating region'.
-  repair(F, vox, z0, ang)     -> F' (ten sam typ), po naprawie kazde zbocze skierowane w dol jest >= (90 - ang) st. od poziomu
+  carve(F, vox, z, ang)       -> F' (ten sam typ): kazda warstwa wystaje poza warstwe nizej najwyzej o vox*tg(ang); zbocza w dol >= (90 - ang) st. od poziomu, brak lokalnych minimow
   slicer_overhang(m, h, thr)  -> dict: pole nawisu [mm2], pole wysp w powietrzu [mm2], najszersze niepodparte miejsce [mm], z"""
 import math
 import numpy as np
 from scipy import ndimage as ndi
 
 
-def smax(a, b, k):
-    h = np.maximum(k - np.abs(a - b), 0.0) / k
-    return np.maximum(a, b) + h * h * k * 0.25
-
-
-def repair(F, vox, z_axis, ang=50.0, k=1.0, zmin=0.0, verbose=True):
-    """Naprawa nawisow w polu F (dodatnie wewnatrz, siatka vox, os z = ostatni indeks, z_axis = wspolrzedne z wezlow [mm]).
-    Idziemy warstwami z gory na dol: warstwa k musi zawierac warstwe k+1 cofnieta o delta = vox * tg(ang) (ang = kat zbocza od PIONU, 50 st. -> zbocza >= 40 st. od poziomu).
-    Odleglosc 2D ze znakiem z podpikselowa dokladnoscia (fast marching). Wypelnienie wchodzi do F przez gladkie maksimum (promien ~k mm)."""
+def carve(F, vox, z_axis, ang=55.0, k=0.35, zmin=0.0, verbose=True):
+    """Idac warstwami OD DOLU kazda warstwa moze wystawac poza warstwe nizej najwyzej o delta = vox * tg(ang) (ang = kat zbocza od PIONU,
+    55 st. -> zbocza w dol >= 35 st. od poziomu): F'[k] = min(F[k], dystans2D(F'[k-1]) + delta). Obcina wszystko, co wisi w powietrzu: srodek brzucha nizej niz boki
+    (kil, kropla), koniec pyska nizej niz reszta, kazdy lokalny minimum powierzchni dolnej poza stolem. Pierwsza warstwa (stol) bez zmian."""
     import skfmm
     delta = vox * math.tan(math.radians(ang))
     G = F.copy()
     n = G.shape[2]
-    top = n - 1
-    while top > 0 and not (G[:, :, top] > 0).any():
-        top -= 1
-    added = 0
-    for kz in range(top - 1, -1, -1):
-        if z_axis[kz] < zmin:
-            break
-        up = G[:, :, kz + 1]
-        if not (up > 0).any() or (up > 0).all():
+    first = None
+    removed = 0
+    for kz in range(n):
+        if z_axis[kz] < zmin or not (G[:, :, kz] > 0).any():
             continue
-        # F ma 0 na powierzchni, wiec zamieniamy na pole ze znakiem 'prawie odleglosc' (F jest ~odlegloscia w mm, wiec dla 2D bierzemy skfmm)
-        D = skfmm.distance(up, dx=vox)
-        C = D - delta
-        lo = G[:, :, kz]
-        new = smax(lo, C.astype(np.float32), k)
-        sel = C > -k                                               # tylko blisko wypelnienia, reszta bez zmian
-        out = np.where(sel, new, lo).astype(np.float32)
-        added += int(((out > 0) & ~(lo > 0)).sum())
+        if first is None:
+            first = kz
+            continue
+        prev = G[:, :, kz - 1]
+        if not (prev > 0).any():
+            continue
+        D = skfmm.distance(prev, dx=vox)                       # > 0 wewnatrz warstwy nizej
+        A = (D + delta).astype(np.float32)                     # dozwolony obszar: warstwa nizej powiekszona o delta
+        cur = G[:, :, kz]
+        out = np.minimum(cur, A) if k <= 0 else (np.minimum(cur, A) - np.maximum(k - np.abs(cur - A), 0.0) ** 2 / (4.0 * k)).astype(np.float32)
+        removed += int(((cur > 0) & ~(out > 0)).sum())
         G[:, :, kz] = out
     if verbose:
-        print(f"  naprawa nawisow: dodano {added * vox ** 3:.0f} mm3 ({added} wokseli), zbocza >= {90 - ang:.0f} st. od poziomu")
+        print(f"  obciecie nawisow: usunieto {removed * vox ** 3:.0f} mm3 ({removed} wokseli), zbocza w dol >= {90 - ang:.0f} st. od poziomu")
     return G
 
 
@@ -62,22 +55,24 @@ def _layers(m, h):
 
 def slicer_overhang(m, h=0.2, thr=25.0, min_area=0.3):
     """thr = prog zbocza od POZIOMU [st.]: nawisem jest czesc warstwy poza warstwa nizej powiekszona o h / tg(thr).
-    Zwraca dict(area, floating, width, z): pole nawisu, pole wysp bez niczego pod spodem (od z > 0,3 mm), najszersze niepodparte miejsce, jego z"""
+    Zwraca dict(area, floating, width, z): pole nawisu, pole PRAWDZIWYCH wysp (skladowa warstwy bez zadnego styku z warstwa nizej, od z > 0,3 mm), najszersze niepodparte miejsce, jego z"""
     L = _layers(m, h)
     d = h / math.tan(math.radians(thr))
     tot = fl = wmax = zmax = 0.0
     for (z1, a), (_, b) in zip(L[1:], L[:-1]):
-        if a is None or b is None:
+        if a is None or b is None or z1 < 0.45:                  # pierwsze warstwy leza na stole (fazka krawedzi stop), nie sa nawisem
             continue
         U = a.difference(b.buffer(d)).buffer(-0.04).buffer(0.04)
         if U.is_empty:
             continue
+        if z1 > 0.3:                                              # prawdziwa wyspa = skladowa warstwy, ktora nie dotyka warstwy nizej (lokalne minimum powierzchni dolnej)
+            for c in (list(a.geoms) if hasattr(a, "geoms") else [a]):
+                if c.area >= min_area and not c.intersects(b):
+                    fl += c.area
         for g in (list(U.geoms) if hasattr(U, "geoms") else [U]):
             if g.area < min_area:
                 continue
             tot += g.area
-            if not g.buffer(0.01).intersects(b) and z1 > 0.3:
-                fl += g.area
             lo, hi = 0.0, 40.0
             for _ in range(14):
                 mid = (lo + hi) / 2

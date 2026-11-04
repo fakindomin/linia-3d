@@ -36,9 +36,9 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `jelen_siedzacy.py` | jeleń siedzący: ta sama głowa, uszy, poroże i skala co `jelen.py` (`S_STD`), inny tułów; te same kontrole (w tym nawisy jak slicer) |
 | `jelen_jelonek.py` | jelonek: ta sama głowa i skala, mały tułów, krótkie nogi, większe uszy, paczki zamiast poroża |
 | `jelen_glowa90.py` | jeleń stojący z głową obróconą w bok (`TURN` = 90°, oś `PIVOT` na końcu szyi): ten sam tułów, nogi i skala, głowa/uszy/poroże obrócone; `build(..., box=...)` z szerszą siatką |
-| `jelen_chudy.py` | jeleń stojący „chudy”: proporcje bliżej wzorca DEER 1 (tułów węższy i niższy, nogi rozstawione szerzej, długa cienka szyja, głowa wyżej); skala z wysokości 50 mm (dwa przebiegi, `S` ≈ 0,81); ta sama głowa, uszy i poroże |
+| `jelen_chudy.py` | jeleń stojący „chudy”: proporcje bliżej wzorca DEER 1 (tułów węższy i niższy, nogi rozstawione szerzej, długa cienka szyja, głowa wyżej i uniesiona); skala z wysokości 50 mm (dwa przebiegi, `S` ≈ 0,82); ta sama głowa, uszy i poroże |
 | `jelen_lezacy.py` | jeleń leżący (tułów na stole, przednie nogi wysunięte); te same kontrole |
-| `nawisy.py` | pod druk bez podpór: `repair` (klin pod płaskimi stropami: brzuch, spód pyska; zbocza ≥ 35° od poziomu) i `slicer_overhang` (miara jak w Bambu: warstwa 0,2, progi 25–40°, wyspy w powietrzu) |
+| `nawisy.py` | pod druk bez podpór: `carve` (od dołu: każda warstwa wystaje najwyżej o stały skos, nic nie wisi w powietrzu, brzuch = namiot z nóg, spód pyska rośnie ku nosowi) i `slicer_overhang` (miara jak w Bambu: warstwa 0,2, progi 25–40°, prawdziwe wyspy) |
 | `choinka_miska.py` | miska-choinka wg „Plätzchen-Schalen”: wierny obrys oryginału w skali 1,0 i 0,8, wariant gładki ze wszystkimi krawędziami zaokrąglonymi (plan, brzeg, dno); parametry w nagłówku (promienie, ścianka, skos) |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |

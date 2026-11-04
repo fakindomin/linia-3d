@@ -5,14 +5,14 @@ import sys, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import jelen
-from jelen import smin, cap, ell, glowa, uszy_poroze, build, checks, S_STD, SM
+from jelen import smin, cap, ell, glowa, uszy_poroze, head_xf, build, checks, S_STD, SM
 
 HEAD_DX, HEAD_DZ = -0.5, -3.5     # przesuniecie glowy wzgledem stojacego (glowa nizej: tulow siedzacego jest nizszy)
 
 
 def design(P):
     X, Y, Z = P
-    Ph = (X - HEAD_DX, Y, Z - HEAD_DZ)                                         # wspolrzedne glowy (glowa, uszy i poroze identyczne jak w jelen.py)
+    Ph = head_xf(P, HEAD_DX, HEAD_DZ, pivot=(11.0, 28.0))                      # wspolrzedne glowy (glowa, uszy i poroze identyczne jak w jelen.py), pysk uniesiony
     D = ell(P, (-5.5, 0, 6.3), (10.5, 10.2, 8.2))                              # siedzisko (splaszczone przez stol -> plama styku)
     D = smin(D, cap(P, (-4.0, 0, 10.5), (6.0, 0, 24.0), 9.6, 8.0), 5 * SM)    # tulow pochylony do przodu
     D = smin(D, ell(P, (7.0, 0, 22.5), (7.2, 8.2, 8.4)), 5 * SM)               # piers

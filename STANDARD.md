@@ -193,6 +193,14 @@ Głowę podnosi/opuszcza `headZ`; w trybie sylwetki szyja idzie razem z nią (`n
 * Kontrole w skrypcie (na gotowym STL, kod wyjścia 1 przy błędzie): wymiary (oryginał × skala, obrys −2…+0,5 mm) i liczba sztuk na stole (siatka i naprzemian czubek w górę/w dół), ścianka ≥ 0,9 mm na 4 wysokościach, pojemność, **gładkość** (kąt między sąsiednimi ścianami trójkątów > 50° tylko dla < 0,02% krawędzi; wynik 13 z 450 tys. — szum decymacji). `verify_print.py --fast` oraz samoprzecięcia (osobno) przechodzą; kontrola ścianek wnęk z `verify_print.py` (promienie) potrzebuje > 7 GB RAM dla siatki 300 tys. trójkątów i dla otwartej miski nic nie mierzy, więc zastępują ją przekroje z `wall_check_mesh`.
 * Wariant pod okrąg 6 szt. (obrys poszerzony tak, że narożniki pięter leżą na liniach klinów 60°, szczelina 1,2 mm; 144 × 118 mm) był w commicie `3c636e6` (`--ring N`); smukła choinka domyka okrąg dopiero dla N = 9. Podgląd w przeglądarce dla tej miski nie istnieje.
 
+## 9c. Jelenie (`jelen.py`, `jelen_siedzacy.py`)
+
+* Własne, oryginalne jelenie „zabawkowe” (gładkie, bez żeber): gruby tułów, duża głowa, krótkie grube nogi, szerokie zbite poroże. Proporcje wzorowane na jeleniu z MakerWorld (autor risi_enma, licencja Standard Digital File License), geometria własna: elipsoidy i kapsuły łączone gładkim minimum pól odległości (`smin`, promień łączenia 1,4–5 mm), nie kopia siatki. Wzorzec służył tylko do porównania proporcji i nawisów.
+* `jelen.py` → `jelen_stojacy.stl` (45 × 39 × 50 mm, skala projektu `S_STD` = 0,9225 dobrana tak, by wysokość = 50,0 mm). `jelen_siedzacy.py` → `jelen_siedzacy.stl` (43 × 39 × 47 mm): ta sama głowa, uszy i poroże (funkcje `glowa`, `uszy_poroze`) i ta sama skala, inny tułów (siedzisko, tylne łapy wysunięte do przodu, proste przednie nogi). Nowa pozycja = nowa funkcja `design` + `build(S_STD, fn=design)`.
+* Poroże i uszy leżą pod kątem ≥ 40° od poziomu (nawis ≤ 50° od pionu), stopy łącznie ≥ 100 mm², środek masy nad otoczką stóp, elementy cieńsze niż 2 mm < 1,5% objętości, dno płaskie z zaokrągloną krawędzią (0,4 mm).
+* **Nawisy jak widzi je slicer** (`overhang_layers`): dla każdej warstwy 0,16 mm obszar niepodparty przez warstwę niżej (cofniętą o h·tg 55°); wymóg: najszersze niepodparte miejsce ≤ 4,0 mm (= wzorzec DEER 1, który drukuje się bez podpór). Wyniki (suma pól / najszersze miejsce): wzorzec DEER 1 68 mm² / 3,9 mm, DEER 2 54 / 2,2, DEER 3 7 / 0,7; nasz stojący 74 / 2,4 (brzuch, z = 8 mm), siedzący 48 / 1,3 (spód pyska, z = 20 mm). Miara powierzchniowa (`standard.overhang_check`, `nawis>55` w logu `finish`) jest ostrzejsza i nie nadaje się do porównań ze wzorcem.
+* Sprawdzone: `verify_print.py --fast` oraz samoprzecięcia (osobno) przechodzą dla obu plików; `build_all.sh` uruchamia `jelen.py` (kontrole w skrypcie, kod wyjścia 1 przy błędzie). Siedzący: `python3 jelen_siedzacy.py`.
+
 ## 10. Pliki
 
 Żebra (19 + 4 renifer kręgiel: `renifer_kregiel_calosc/korpus/poroze_prawe/poroze_lewe`): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
@@ -202,5 +210,5 @@ Lowpoly (19): te same nazwy z prefiksem `lp_` (np. `lp_krolik_calosc.stl`, `lp_b
 Skrypty: `standard.py`, `models.py`, `lp.py`, `lp_parts.py`, `meshclean.py` + `clean_stl.py` (czyszczenie mikro-trójkątów), `verify_print.py` (kontrola druku), `build_std_lowpoly.py` (wszystkie lp_*.stl), `build_std_ribbed_parts.py` (części żebrowane),
 `build_egg.py` + `build_dlugie.py` (czapki jajka), `build_figurki.py`/`build_pumpkin.py`/`build_snowman.py` (korpusy żebrowane), `renifer_kregiel.py` (renifer z parametrami wzoru), `verify_all.py`, `new_model_template.py`.
 Miska-choinka: `choinka_miska.py` (`choinka_miska_100.stl`, `choinka_miska_80.stl`; gładka, krawędzie zaokrąglone).
-Jeleń: `jelen.py` (`jelen_stojacy.stl`, 50 mm, gładki; wzorzec proporcji: zabawkowy jeleń z MakerWorld, własna geometria z pól odległości, nie kopia).
+Jelenie: `jelen.py` (`jelen_stojacy.stl`, 50 mm) i `jelen_siedzacy.py` (`jelen_siedzacy.stl`), gładkie, własna geometria z pól odległości (sekcja 9c).
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.

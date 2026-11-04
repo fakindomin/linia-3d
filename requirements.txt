@@ -9,3 +9,4 @@ pillow
 networkx
 rtree
 matplotlib
+scikit-fmm

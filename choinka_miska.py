@@ -1,36 +1,51 @@
-"""Miska-choinka do ukladu w okregu (6 szt.) - wersja linii wg oryginalu 'Plätzchen-Schalen'.
-Obrys z pietrami (jak oryginal), ale rozszerzony tak, zeby 6 miseczek zamknelo okrag: naroznik kazdego pietra lezy na linii klina 360/N
-(odstep od sasiadki = GAP), skosy pietr maja kat BETA od osi, polki poziome (ok. 8,5 mm jak w oryginale), pien na zewnatrz, czubek do srodka.
-Bryla: dno 1,2 mm, sciany skosne FLARE od pionu (bez podpor), wnetrze = obrys cofniety o grubosc scianki; wariant zebrowany (standard linii:
-amplituda +-0,8, rozstaw ok. 3,4 mm, zeby zawsze w szczytach na wierzcholkach obrysu, wiec narozniki styka sie z sasiadka tak samo)
-i gladki. Wymiary w mm; z = 0 to stol.
-  choinka_miska_zebra.stl, choinka_miska_gladka.stl (+ out/choinka_pierscien.png: podglad 6 szt. z przekrojow gotowych STL)"""
+"""Miska-choinka wg oryginalu 'Plätzchen-Schalen' (105 x 141 x 21 mm): zebrowana (standard linii) i gladka.
+Domyslnie WIERNY obrys oryginalu (smukly, 3 pietra, polki, pien) w skali SCALE_OUT = 0.8 (84 x 113 x 17 mm), tak zeby na stole 256 x 256 mieszcza sie
+3-4 szt. Bryla: dno 1,2 mm, sciany skosne FLARE od pionu (bez podpor), wnetrze = obrys cofniety o grubosc scianki, zebra standardowe (+-0,8, rozstaw ok. 3,4 mm,
+szczyty na wierzcholkach, zanik przy wierzcholkach). Wymiary w mm; z = 0 to stol.
+Opcja `--ring N` (tryb pierscienia): choinka poszerzona tak, ze N szt. zamyka okrag (narozniki pieter na liniach klinow 360/N, szczelina GAP) - jest wtedy grubsza
+(N = 6: 145 x 118); N = 9 daje prawie oryginalna sylwetke.
+  python3 choinka_miska.py [zebra] [gladka] [--ring N]
+  choinka_miska_zebra.stl, choinka_miska_gladka.stl (+ choinka_miska_p{N}_*.stl i out/choinka_pierscien.png dla --ring)"""
 import sys, math, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from rev import *
 import shapely
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 from shapely.ops import unary_union
 from shapely import affinity
 
 # ---- parametry (jedna definicja; Python = zrodlo prawdy) ----
-N_RING = 6                       # liczba miseczek w okregu (360/N = kat klina)
-SCALE = 0.85                     # skala glebokosci pieter wzgledem oryginalu (oryginal: 105 x 142 mm)
-BETA = 40.0                      # kat skosu pietra od osi (oryginal: 30 st. przy klinie 41 st.; tu polki ~8,5 mm jak w oryginale 8,8)
-GAP = 1.2                        # szczelina miedzy sasiadkami na brzegu [mm]
+SCALE_OUT = 0.8                  # skala obrysu i wysokosci wzgledem oryginalu (oryginal 105 x 141 x 21,2 mm -> 84 x 113 x 17)
+H_ORIG = 21.2                    # wysokosc oryginalu
+FLOOR = 1.2                      # dno (oryginal 1,2; nie skalowane)
+FLARE = 15.0                     # odchylenie scian od pionu (oryginal ok. 15 st.; nawis 15 st. - bez podpor)
+WALL_RIB, WALL_PLAIN = 2.6, 1.6  # grubosc scianki (normalna) w szczycie zebra / wariant gladki; w dolince zebra: -1,6 mm (nie skalowane)
+VOX = 0.3
+FADE0, FADE1 = 0.8, 3.0          # zanik zeber przy wierzcholkach obrysu [mm]
+BED = 256.0                      # stol drukarki (P1S) [mm]
+# obrys oryginalu (prawa polowka, 100%): (polszerokosc, glebokosc od czubka); polki poziome, mala pionowa kreska przy narozniku i w kacie polki
+ORIG_RIGHT = [(29.6, 49.0), (29.6, 50.0), (20.8, 50.0), (20.8, 52.6),
+              (40.8, 87.7), (40.8, 88.7), (32.0, 88.7), (32.0, 91.3),
+              (52.0, 126.1), (52.0, 127.1), (24.1, 127.1), (24.1, 141.2)]
+# tryb pierscienia
+N_RING, SCALE_RING, BETA, GAP = 6, 0.85, 40.0, 1.2
 D_ORIG = (48.7, 86.8, 125.2)     # glebokosc naroznikow pieter od czubka w oryginale
 TRUNK_HW, TRUNK_L = 24.1, 12.0   # polszerokosc i dlugosc pnia w oryginale
-H = 21.2                         # wysokosc miski (oryginal 21,2)
-FLOOR = 1.2                      # dno (oryginal 1,2)
-FLARE = 15.0                     # odchylenie scian od pionu (oryginal ok. 15 st.; nawis 15 st. - bez podpor)
-WALL_RIB, WALL_PLAIN = 2.6, 1.6  # grubosc scianki (normalna) w szczycie zebra / wariant gladki; w dolince zebra: -1,6 mm
-VOX = 0.3
-FADE0, FADE1 = 0.8, 3.0                # zanik zeber przy wierzcholkach obrysu [mm]
 
 
-def tree_outline(N=N_RING, scale=SCALE, beta=BETA, gap=GAP, d=D_ORIG, trunk_hw=TRUNK_HW, trunk_l=TRUNK_L):
-    """obrys na brzegu (szczyty zeber) w ukladzie okregu: srodek kola (0,0), os drzewka +y, czubek przy y = r0, pien na zewnatrz"""
+def orig_outline(scale=SCALE_OUT):
+    """wierny obrys oryginalu w skali scale, czubek do gory, srodek ramki w (0,0)"""
+    right = [(x * scale, -d * scale) for x, d in ORIG_RIGHT]
+    verts = [(0.0, 0.0)] + right + [(-x, y) for x, y in reversed(right)]
+    poly = Polygon(verts)
+    assert poly.is_valid, "obrys nieprawidlowy"
+    cy = (poly.bounds[1] + poly.bounds[3]) / 2
+    return affinity.translate(poly, 0, -cy)
+
+
+def tree_outline(N=N_RING, scale=SCALE_RING, beta=BETA, gap=GAP, d=D_ORIG, trunk_hw=TRUNK_HW, trunk_l=TRUNK_L):
+    """tryb pierscienia: obrys na brzegu w ukladzie okregu: srodek kola (0,0), os drzewka +y, czubek przy y = r0, pien na zewnatrz"""
     psi = math.pi / N
     tp, tb = math.tan(psi), math.tan(math.radians(beta))
     off = gap / 2 / math.cos(psi)                        # odsuniecie naroznika od linii klina (szczelina gap)
@@ -75,17 +90,25 @@ def poly_sdf_rib(poly, xs, ys, amp, pitch=RIB_PITCH):
         else:
             off = np.where(m, np.float32(0.0), off)
         best = np.where(m, d2, best)
-    # przy wierzcholkach zebra zanikaja (0,8 -> 3,0 mm): ostry naroznik pietra zostaje pelny i styka sie z sasiadka tak jak w obrysie
-    dv = np.full(X.shape, np.inf)
-    for vx, vy in V:
-        dv = np.minimum(dv, np.hypot(X - vx, Y - vy))
-    off = off * sstep(dv, FADE0, FADE1).astype(np.float32)
+    # przy wierzcholkach zebra zanikaja (0,8 -> 3,0 mm): ostry naroznik pietra zostaje pelny
+    # (w ostrych wierzcholkach < 80 st. strefa zaniku rosnie ~1/sin(kat/2): czubek nie jest sciety zebrami)
+    fade = np.ones(X.shape, np.float32)
+    n = len(V)
+    for i in range(n):
+        vx, vy = V[i]
+        u, w = V[i - 1] - V[i], V[(i + 1) % n] - V[i]
+        cosang = float(np.dot(u, w) / (np.linalg.norm(u) * np.linalg.norm(w) + 1e-12))
+        ang = math.acos(max(-1.0, min(1.0, cosang)))
+        k = 1.0 / math.sin(ang / 2) if ang < math.radians(80) else 1.0
+        dv = np.hypot(X - vx, Y - vy)
+        fade = np.minimum(fade, sstep(dv, FADE0 * k, FADE1 * k).astype(np.float32))
+    off = off * fade
     inside = shapely.contains_xy(poly, X, Y)
     sd = np.where(inside, np.sqrt(best), -np.sqrt(best)).astype(np.float32)
     return sd, off
 
 
-def bowl_F(poly, ribbed, vox=VOX):
+def bowl_F(poly, ribbed, H, vox=VOX):
     """pole F (dodatnie w materiale): skosne sciany, dno, zebra na zewnatrz"""
     amp = RIB_AMP if ribbed else 0.0
     wall = WALL_RIB if ribbed else WALL_PLAIN
@@ -104,21 +127,32 @@ def bowl_F(poly, ribbed, vox=VOX):
     return F.astype(np.float32), axes
 
 
-def build(ribbed, vox=VOX):
-    poly, info = tree_outline()
-    # ukad pliku: czubek w gore (os +y), srodek miski w (0,0): obrot o 180 st. wokol srodka kola, potem przesuniecie
-    up = affinity.rotate(poly, 180, origin=(0, 0))
-    cy = (up.bounds[1] + up.bounds[3]) / 2
-    up = affinity.translate(up, 0, -cy)
-    F, axes = bowl_F(up, ribbed, vox)
-    name = "choinka_miska_zebra.stl" if ribbed else "choinka_miska_gladka.stl"
-    note = f"miska-choinka do okregu {N_RING} szt.; {'zebra +-0,8' if ribbed else 'gladka'}; sciana {FLARE:.0f} st., dno {FLOOR} mm"
+def build(ribbed, ring=None, vox=VOX):
+    """zwraca (mesh, info, srodek_kola, H, nazwa); srodek kola tylko w trybie pierscienia"""
+    if ring:
+        poly, info = tree_outline(N=ring)
+        H = H_ORIG
+        up = affinity.rotate(poly, 180, origin=(0, 0))          # czubek w gore, srodek kola w (0,0), potem przesuniecie
+        cy = (up.bounds[1] + up.bounds[3]) / 2
+        up = affinity.translate(up, 0, -cy)
+        center = (0.0, -cy)
+        base = f"choinka_miska_p{ring}"
+        note = f"miska-choinka do okregu {ring} szt."
+    else:
+        up = orig_outline()
+        info, center = {}, None
+        H = round(H_ORIG * SCALE_OUT, 1)
+        base = "choinka_miska"
+        note = f"miska-choinka wg oryginalu x{SCALE_OUT}"
+    F, axes = bowl_F(up, ribbed, H, vox)
+    name = f"{base}_{'zebra' if ribbed else 'gladka'}.stl"
+    note += f"; {'zebra +-0,8' if ribbed else 'gladka'}; sciana {FLARE:.0f} st., dno {FLOOR} mm"
     m = finish(F, axes, vox, name, note, target=300000)
-    return m, info, (0.0, -cy)               # srodek kola w ukladzie pliku
+    return m, info, center, H, name
 
 
-def ring_check_mesh(m, center, N=N_RING, gap=GAP, label=""):
-    """kontrola na GOTOWYM STL: przekroj tuz pod brzegiem, N kopii obroconych o 360/N wokol srodka kola (center, w ukladzie pliku) ->
+def ring_check_mesh(m, center, H, N=N_RING, gap=GAP, label=""):
+    """tryb pierscienia, na GOTOWYM STL: przekroj tuz pod brzegiem, N kopii obroconych o 360/N wokol srodka kola (center, w ukladzie pliku) ->
     najmniejsza odleglosc miedzy sasiadkami, nachodzenie"""
     s = m.section(plane_origin=[0, 0, m.bounds[0][2] + H - 0.4], plane_normal=[0, 0, 1])
     rim = unary_union([Polygon(seg[:, :2]).buffer(0) for seg in s.discrete if len(seg) >= 4])
@@ -134,13 +168,12 @@ def ring_check_mesh(m, center, N=N_RING, gap=GAP, label=""):
     return ok, cp, (0.0, cy)
 
 
-def wall_check_mesh(m, label="", min_wall=0.9):
+def wall_check_mesh(m, H, label="", min_wall=0.9):
     """grubosc scianki (poziomo) na gotowym STL: odleglosc obrysu wneki od obrysu zewnetrznego na 4 wysokosciach (wymog standardu >= 0,8 mm;
     tu z zapasem 0,1 na skos); pojemnosc wneki (calka z przekrojow)"""
-    from shapely.geometry import Point
     z0 = m.bounds[0][2]
     wmin = 1e9
-    for z in (4.0, 10.0, 18.0, H - 0.5):
+    for z in (4.0, 8.0, H - 4.0, H - 0.5):
         s = m.section(plane_origin=[0, 0, z0 + z], plane_normal=[0, 0, 1])
         loops = sorted([Polygon(seg[:, :2]).buffer(0) for seg in s.discrete if len(seg) >= 4], key=lambda q: -q.area)
         outer, inner = loops[0], loops[1]
@@ -152,6 +185,16 @@ def wall_check_mesh(m, label="", min_wall=0.9):
         vol += loops[1].area * 1.0
     ok = wmin >= min_wall
     print(f"  scianka {label}: min {wmin:.2f} mm (wymog >= {min_wall}) | pojemnosc wneki ok. {vol / 1000:.0f} ml -> {'PASS' if ok else 'FAIL'}")
+    return ok
+
+
+def size_check(m, H, label=""):
+    """wymiary gotowego STL = oryginal x SCALE_OUT (+-1 mm) i ile sztuk miesci sie na stole BED x BED (siatka, odstep 4 mm, obie orientacje)"""
+    w, d, h = (float(v) for v in m.extents)
+    want = (104.2 * SCALE_OUT, 141.3 * SCALE_OUT, H)
+    cap = max((int((BED + 4) // (a + 4)) * int((BED + 4) // (b + 4))) for a, b in ((w, d), (d, w)))
+    ok = abs(w - want[0]) <= 1.5 and abs(d - want[1]) <= 1.5 and abs(h - want[2]) <= 0.3 and cap >= 3
+    print(f"  wymiary {label}: {w:.1f} x {d:.1f} x {h:.1f} mm (oryginal x{SCALE_OUT}: {want[0]:.1f} x {want[1]:.1f} x {want[2]:.1f}) | na stole {BED:.0f} x {BED:.0f} miesci sie {cap} szt. -> {'PASS' if ok else 'FAIL'}")
     return ok
 
 
@@ -174,16 +217,25 @@ def ring_preview(cp, center, path):
 
 if __name__ == "__main__":
     T0 = time.time()
-    which = sys.argv[1:] or ["zebra", "gladka"]
+    args = sys.argv[1:]
+    ring = None
+    if "--ring" in args:
+        i = args.index("--ring")
+        ring = int(args[i + 1])
+        del args[i:i + 2]
+    which = args or ["zebra", "gladka"]
     allok = True
     for w in which:
         t = time.time()
-        m, info, c = build(w == "zebra")
-        ok, cp, c = ring_check_mesh(m, c, label=w)
-        allok &= ok
-        allok &= wall_check_mesh(m, label=w)
-        if w == "zebra":
-            ring_preview(cp, c, os.path.join(OUT, "choinka_pierscien.png"))
+        m, info, c, H, name = build(w == "zebra", ring=ring)
+        if ring:
+            ok, cp, c = ring_check_mesh(m, c, H, N=ring, label=w)
+            allok &= ok
+            if w == "zebra":
+                ring_preview(cp, c, os.path.join(OUT, "choinka_pierscien.png"))
+        else:
+            allok &= size_check(m, H, label=w)
+        allok &= wall_check_mesh(m, H, label=w)
         print(f"  {w}: {time.time() - t:.0f} s")
     print(f"czas {time.time() - T0:.0f} s | {'PASS' if allok else 'FAIL'}")
     sys.exit(0 if allok else 1)

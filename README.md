@@ -32,6 +32,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `lp.py`, `lp_parts.py` | rdzeń lowpoly (pierścienie, boolean przez manifold3d, liść, poroże) |
 | `build_*.py`, `ears_A.py` | skrypty budujące STL (kolejność w `build_all.sh`) |
 | `renifer_kregiel.py` | renifer z parametrami wzoru (sylwetka z punktów: podstawa, brzuch, barki, szyja, głowa; poroże N poziomów z odnogami do środka, uszy-liście); parametry = suwaki i punkty na rysunku w podglądzie |
+| `jelen.py` | jeleń stojący (gładki, „zabawkowy”: gruby tułów, duża głowa, krótkie grube nogi, zbite szerokie poroże), 50 mm, z pól odległości; kontrole: wysokość, szczelność, środek masy nad podstawą, stopy ≥ 100 mm², nawisy, elementy < 2 mm |
 | `choinka_miska.py` | miska-choinka wg „Plätzchen-Schalen”: wierny obrys oryginału w skali 1,0 i 0,8, wariant gładki ze wszystkimi krawędziami zaokrąglonymi (plan, brzeg, dno); parametry w nagłówku (promienie, ścianka, skos) |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |

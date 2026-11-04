@@ -21,6 +21,7 @@ python3 build_B_doniczki.py         # doniczka_S/M/L, podstawka_S/M/L, sloik, sl
 python3 build_B_bombki.py           # bombka_okragla_60/80/100, bombka_kropla
 python3 build_B_choinka.py          # choinka_1..4, choinka_podstawa, choinka_gwiazda
 python3 build_flakes.py             # platek_01..10
+python3 jelen.py                    # jelen_stojacy.stl (50 mm, gladki): kontrole wysokosci, srodka masy, stop, nawisow
 python3 choinka_miska.py            # choinka_miska_100/80 (gladka, krawedzie zaokraglone): kontrola wymiarow, scianek, gladkosci i miejsca na stole (ok. 5 min)
 python3 build_test.py               # test_czop, test_gniazdo_blok (probka pasowania na drukarke)
 python3 build_std_ribbed_parts.py   # STANDARD v1.0: czesci zebrowane przyciete do koperty (nadpisuje wersje powyzej)

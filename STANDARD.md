@@ -202,4 +202,5 @@ Lowpoly (19): te same nazwy z prefiksem `lp_` (np. `lp_krolik_calosc.stl`, `lp_b
 Skrypty: `standard.py`, `models.py`, `lp.py`, `lp_parts.py`, `meshclean.py` + `clean_stl.py` (czyszczenie mikro-trójkątów), `verify_print.py` (kontrola druku), `build_std_lowpoly.py` (wszystkie lp_*.stl), `build_std_ribbed_parts.py` (części żebrowane),
 `build_egg.py` + `build_dlugie.py` (czapki jajka), `build_figurki.py`/`build_pumpkin.py`/`build_snowman.py` (korpusy żebrowane), `renifer_kregiel.py` (renifer z parametrami wzoru), `verify_all.py`, `new_model_template.py`.
 Miska-choinka: `choinka_miska.py` (`choinka_miska_100.stl`, `choinka_miska_80.stl`; gładka, krawędzie zaokrąglone).
+Jeleń: `jelen.py` (`jelen_stojacy.stl`, 50 mm, gładki; wzorzec proporcji: zabawkowy jeleń z MakerWorld, własna geometria z pól odległości, nie kopia).
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.

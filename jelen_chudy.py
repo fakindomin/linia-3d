@@ -5,7 +5,7 @@ Uklad: x = przod, y = bok, z = gora; z = 0 to stol.
 import sys, math, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from jelen import smin, cap, ell, glowa_chuda, uszy_poroze_chude, head_xf, build, checks, HEIGHT, SM
+from jelen import smin, cap, ell, glowa_chuda, uszy_poroze_chude, ogon_kulka, head_xf, build, checks, HEIGHT, SM
 
 S_CH = 0.8202                  # skala projektu -> mm (daje wysokosc 50 mm; sprawdzana w przebiegu 2; wersja ze skreconym lbem uzywa tej samej skali)
 HEAD_PITCH = 22.0              # glowa uniesiona (pysk do gory) o tyle stopni wokol konca szyi: spod pyska rosnie ku nosowi, jak we wzorcu
@@ -36,7 +36,7 @@ def design(P, turn=0.0):
     D = smin(D, ell(P, RUMP["c"], RUMP["r"]), 4.0 * SM)
     D = smin(D, cap(P, NECK[0], NECK[1], NECK[2], NECK[3]), 4.5 * SM)
     D = glowa_chuda(D, Ph)
-    D = smin(D, ell(P, (-14.5, 0, 19.5), (3.0, 2.6, 3.2)), 2.5 * SM)         # ogon
+    D = ogon_kulka(D, P, (-15.6, 0, 19.2))                                  # ogon: pompon-kulka
     for s in (-1.0, 1.0):
         D = smin(D, cap(P, (LEG_X, s * LEG_Y_TOP, 14.5), (LEG_X + 0.5, s * LEG_Y_FOOT, 0.0), LEG_R[0], LEG_R[1]), 4 * SM)
         D = smin(D, cap(P, (-LEG_X, s * LEG_Y_TOP, 14.5), (-LEG_X - 0.7, s * LEG_Y_FOOT, 0.0), LEG_R[0] + 0.1, LEG_R[1] + 0.1), 4 * SM)

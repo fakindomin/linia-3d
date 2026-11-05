@@ -60,11 +60,19 @@ def glowa(D, P):
     return D
 
 
+NOS_RUDOLF = ((25.4, 0.0, 30.0), 4.2)   # (srodek, promien) kulki-nosa [jedn. projektu]: wieksza od konca pyska (r 3,5), dolem styczna do spodu pyska, zeby nie wisiala
+
+
+def ogon_kulka(D, P, c, R=3.5):
+    """ogon-pompon: kulka o promieniu R ze srodkiem c, wtopiona w zad (linia 'chudy')"""
+    return smin(D, ell(P, c, (R, R, R)), 2.2 * SM)
+
+
 def glowa_chuda(D, P):
     """jak glowa(), ale smuklejsza: wezszy leb (+-6,4 zamiast 7,6) i pysk; ten sam uklad, dlugosc i wysokosc (linia 'chudy')"""
     D = smin(D, ell(P, (13.5, 0, 33.0), (9.0, 6.4, 7.9)), 3.5 * SM)            # glowa
     D = smin(D, cap(P, (18.8, 0, 31.0), (24.4, 0, 29.4), 4.4, 3.5), 3 * SM)  # pysk
-    D = smin(D, ell(P, (24.6, 0, 29.6), (2.4, 2.4, 2.2)), 1.5 * SM)           # nos
+    D = smin(D, ell(P, NOS_RUDOLF[0], (NOS_RUDOLF[1],) * 3), 1.5 * SM)         # nos jak u Rudolfa: duza kulka na koncu pyska
     return D
 
 

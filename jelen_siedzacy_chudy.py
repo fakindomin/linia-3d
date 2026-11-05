@@ -4,7 +4,7 @@ wezsza glowa i mniejsze uszy (glowa_chuda, uszy_chude), to samo poroze, uniesion
 import sys, time
 import numpy as np
 import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from jelen import smin, cap, ell, glowa_chuda, uszy_poroze_chude, head_xf, build, checks, SM
+from jelen import smin, cap, ell, glowa_chuda, uszy_poroze_chude, ogon_kulka, head_xf, build, checks, SM
 from jelen_chudy import S_CH, HEAD_PITCH
 
 HEAD_DX, HEAD_DZ = -0.5, 0.7        # glowa wyzej niz w jelen_siedzacy.py (dluga szyja)
@@ -19,7 +19,7 @@ def design(P):
     D = smin(D, ell(P, (7.0, 0, 23.5), (6.4, 6.2, 7.8)), 5 * SM)                # piers
     D = smin(D, cap(P, (7.8, 0, 24.5), (NECK_TOP[0], 0, NECK_TOP[1]), 4.9, 4.0), 4.5 * SM)   # szyja dluga i cienka
     D = glowa_chuda(D, Ph)
-    D = smin(D, ell(P, (-15.5, 0, 6.0), (3.0, 2.6, 3.2)), 2.5 * SM)            # ogon
+    D = ogon_kulka(D, P, (-16.2, 0, 3.4))                                   # ogon: pompon-kulka, lekko wciśnięty w stol
     for s in (-1.0, 1.0):
         D = smin(D, ell(P, (-2.5, s * 4.6, 8.0), (6.8, 3.2, 6.6)), 4 * SM)      # udo wpasowane w obrys tulowia
         D = smin(D, cap(P, (0.0, s * 5.6, 7.0), (3.2, s * 7.0, 3.0), 3.2, 2.7), 3.5 * SM)    # podudzie wysuniete do przodu

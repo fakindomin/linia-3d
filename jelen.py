@@ -60,7 +60,7 @@ def glowa(D, P):
     return D
 
 
-NOS_RUDOLF = ((23.8, 0.0, 30.4), 4.2)   # (srodek, promien) kulki-nosa [jedn. projektu]: wieksza od konca pyska (r 3,5), dolem styczna do spodu pyska, zeby nie wisiala
+NOS_RUDOLF = ((25.3, 0.0, 30.3), 2.6)   # (srodek, promien) kulki-nosa [jedn. projektu]: mala kulka na samej koncowce pyska, mniejsza od konca pyska (r 3,6), dolem nie wystaje poza spod pyska
 
 
 def ogon_kulka(D, P, c, R=3.5):
@@ -71,8 +71,8 @@ def ogon_kulka(D, P, c, R=3.5):
 def glowa_chuda(D, P):
     """jak glowa(), ale smuklejsza: wezszy leb (+-6,4 zamiast 7,6) i krotszy, wezszy pysk; ten sam uklad, dlugosc i wysokosc (linia 'chudy')"""
     D = smin(D, ell(P, (13.5, 0, 33.0), (9.0, 6.4, 7.9)), 3.5 * SM)            # glowa
-    D = smin(D, cap(P, (18.8, 0, 31.0), (22.8, 0, 29.9), 4.4, 3.7), 3 * SM)  # pysk (skrocony o ok. 1,5 mm: nos-kulka siedzi na jego koncu)
-    D = smin(D, ell(P, NOS_RUDOLF[0], (NOS_RUDOLF[1],) * 3), 1.5 * SM)         # nos jak u Rudolfa: duza kulka na koncu pyska
+    D = smin(D, cap(P, (18.8, 0, 31.0), (22.2, 0, 29.9), 4.4, 3.6), 3 * SM)  # pysk (krotszy o ok. 1,8 mm niz w jelen.py)
+    D = smin(D, ell(P, NOS_RUDOLF[0], (NOS_RUDOLF[1],) * 3), 0.7 * SM)         # nos jak u Rudolfa: mala, wyrazna kulka na koncowce pyska (male wtopienie = widac kule)
     return D
 
 

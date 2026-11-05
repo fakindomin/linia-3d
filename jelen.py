@@ -60,6 +60,19 @@ def glowa(D, P):
     return D
 
 
+def glowa_chuda(D, P):
+    """jak glowa(), ale smuklejsza: wezszy leb (+-6,4 zamiast 7,6) i pysk; ten sam uklad, dlugosc i wysokosc (linia 'chudy')"""
+    D = smin(D, ell(P, (13.5, 0, 33.0), (9.0, 6.4, 7.9)), 3.5 * SM)            # glowa
+    D = smin(D, cap(P, (18.8, 0, 31.0), (24.4, 0, 29.4), 4.4, 3.5), 3 * SM)  # pysk
+    D = smin(D, ell(P, (24.6, 0, 29.6), (2.4, 2.4, 2.2)), 1.5 * SM)           # nos
+    return D
+
+
+def uszy_chude(D, P, s, k=0.78):
+    """ucho linii 'chudy': ten sam kierunek (nawis ok. 39 st. od poziomu), ale mniejsze i blizej glowy (koniec ucha +-12 zamiast +-16)"""
+    return smin(D, ell_dir(P, (10.6, s * 8.4, 36.8), (-0.20, s * 0.765, 0.628), 6.6 * k, 3.9 * k, 1.8 * 0.9), 2.5 * SM)
+
+
 HEAD_PITCH = 22.0    # domyslne uniesienie glowy (pysk do gory) [st.]: spod pyska rosnie ku nosowi (>= 32 st.), wiec nic nie wisi w powietrzu
 
 
@@ -92,6 +105,11 @@ def poroze(D, P, s):
 def uszy_poroze(D, P, s):
     """ucho i poroze jednej strony dodane do pola D (wspolne dla wszystkich pozycji)"""
     return poroze(uszy(D, P, s), P, s)
+
+
+def uszy_poroze_chude(D, P, s):
+    """jak uszy_poroze(), ale z mniejszymi uszami (linia 'chudy'); poroze bez zmian"""
+    return poroze(uszy_chude(D, P, s), P, s)
 
 
 def design(P):

@@ -209,6 +209,15 @@ Głowę podnosi/opuszcza `headZ`; w trybie sylwetki szyja idzie razem z nią (`n
 * Linia „chudy” v3 (nos i ogon): nos jak u Rudolfa = mała kulka na samej końcówce pyska (`jelen.NOS_RUDOLF`: r 2,6 jedn. ≈ 2,1 mm, wyraźnie mniejsza od końca pyska r 3,6; dołem nie wystaje poza spód pyska, nic nie wisi), pysk w `glowa_chuda` skrócony o ok. 1,8 mm, ogon = pompon-kulka (`jelen.ogon_kulka`, r 3,5 jedn. ≈ 2,9 mm; stojący na zadzie, siedzący i leżący lekko wciśnięty w stół). Ciało bez zmian. 0 mm² nawisu i 0 wysp przy 25 / 30 / 35° we wszystkich czterech, samoprzecięcia 0.
 * Sprawdzone: `verify_print.py --fast` oraz samoprzecięcia (osobno, `vp.check(f, with_wall=False, with_selfint=True)`, siatki 150–220 tys. trójkątów) przechodzą dla wszystkich czterech plików; `build_all.sh` uruchamia cztery skrypty (kontrole w skrypcie, kod wyjścia 1 przy błędzie).
 
+## 9d. Jajko niespodzianka: zamek na sztywno (`jajko_zamek_proba.py`)
+
+Cel: „porządne” jajko niespodzianka 44 × 68 mm z porożem renifera (czapka z gniazdami + poroże wymienne jak dotąd), które **zamyka się na sztywno**. Dotychczasowy szew (kołnierz 1,2 × 7 mm, luz 0,25 promieniowo i 0,2 osiowo) siedzi luźno, więc przed zmianą jajka drukujemy **próbkę łączenia** w skali 1:1 na prawdziwej średnicy szwu (R_CAV = 24, RMAX = 28):
+
+* Dolny pierścień: ramię na z = 4, kołnierz 1,5 × 8 mm (szersza ścianka = sztywniejszy), **wypustka-zatrzask** 0,25 mm na zewnątrz kołnierza (zbocza 63° od poziomu, nic nie wisi), fazka 0,5 mm na górze.
+* Górny pierścień (drukowany otworem w dół): otwór = kołnierz + luz, **rowek** na wypustkę (głębokość 0,30, zbocza 63°), stożek sufitu otworu 45° do R_CAV, fazka wejścia 0,5 mm; luz osiowy 0,1 mm (czapka siada na ramieniu).
+* Trzy wersje luzu promieniowego: 1 = 0,10 (wcisk wypustki 0,15 mm), 2 = 0,15 (0,10), 3 = 0,20 (0,05); numer = liczba nacięć na górnej krawędzi. Dotychczasowe jajko to 0,25 (wcisk 0).
+* Kontrole: w pozycji zamkniętej brak nakładania (przekrój r–z, shapely), nawisy 0 mm² przy 25–40°, szczelne, 4 składowe, bez samoprzecięć. Wynik próby (który luz zamyka na sztywno bez łamania) idzie do `shapes.py` (`LIP_WALL`, `LIP_H`, `CLEAR_R`, `CLEAR_Z`) i `build_egg.py`.
+
 ## 10. Pliki
 
 Żebra (19 + 4 renifer kręgiel: `renifer_kregiel_calosc/korpus/poroze_prawe/poroze_lewe`): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,

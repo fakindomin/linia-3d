@@ -23,6 +23,7 @@ BEAD_H, BEAD_Z = 0.25, 4.5                        # wypustka-zatrzask: wysokosc 
 GROOVE_D = 0.30                                   # glebokosc rowka w czapce ponad otwor (rowek ma 0,05 zapasu wzgledem wypustki)
 GAP_Z = 0.10                                      # luz osiowy czapka-ramie (dotad 0,2)
 CLEARS = (0.10, 0.15, 0.20)                       # luz promieniowy otworu czapki: wersje 1, 2, 3 (dotad 0,25 = luzno)
+CLEAR_WYBRANY = CLEARS[2]                         # WYBOR po wydruku wycinka: wersja nr 3 (luz 0,20 mm, wcisk wypustki 0,05); uzywa jajko_renifer.py
 H_CAP = 12.0                                      # wysokosc probnego pierscienia czapki
 BORE_DEPTH = 8.6                                  # gleb. otworu na kolnierz (kolnierz 8,0 + luz 0,1 + zapas)
 R_LIP = R_CAV + LIP_WALL

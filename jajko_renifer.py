@@ -23,7 +23,8 @@ R_TOP = 5.0                      # promien plaskiego sufitu
 Z_A = CEIL_Z - (R_CAV - R_TOP) / CONE
 ZR = ZS + GAP_Z                  # brzeg czapki
 PLA = 1.24
-LEAF_IN = 2.0                    # uszy o tyle mm blizej siebie niz w duzym modelu (na jajku wchodza ok. w polowie na poroze w widoku z przodu: 26% -> 49%)
+LEAF_ANG = 15.0                  # uszy prawie pionowo: lekki kat 15 st. od pionu na zewnatrz (w duzym modelu leafAng = 50 st.)
+LEAF_IN = 2.0                    # uszy o tyle mm blizej siebie niz w duzym modelu (miejsce osadzenia zatwierdzone; przy kacie 15 st. ucho zachodzi na poroze w widoku z przodu w 87%, przy LEAF_IN = -1: 47%)
 P = RK.params()                # poroze ANT_K (3 poziomy) i uszy LEAF z duzego modelu
 
 
@@ -52,7 +53,7 @@ def leaf_frame(s):
     yc = Y0 + 2.5 - P["earT"] - P["leafGap"] - T / 2.0
     z = z_at_R(rr)
     P0 = np.array([s * math.sqrt(max(rr * rr - yc * yc, 0.0)), yc + T / 2.0 - 2.5, z])
-    return mount_frame(s, P0, math.radians(P["leafAng"]), 0.0)
+    return mount_frame(s, P0, math.radians(LEAF_ANG), 0.0)
 
 
 def frame_box(fr, ar, br, cr):

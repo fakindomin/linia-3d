@@ -2,7 +2,7 @@
 z duzego modelu (renifer_kregiel.py) przytopione do czapki; ucho lezy 1 mm PRZED porozem (leafGap).
   miseczka: jajko do szwu ZS = 34, kolnierz 1,5 x 8 mm z wypustka 0,25 mm; dno plaskie (z = 0), wneka jak w build_egg.py (pod jajko 44 x 68);
   czapka:   od szwu (+0,1 mm luzu osiowego) do wierzchu, otwor w dol z rowkiem na wypustke, stozkowy sufit 52 st. (plaski sufit r = 5 na z = 76),
-            poroze (ramka jak w duzym modelu: earX = 11,5, odchylenie 12 st.) i uszy-liscie (kat 50 st. od pionu, pozycja jak 'polar 46 st.' glowy).
+            poroze (ramka jak w duzym modelu: earX = 11,5, odchylenie 12 st.) i uszy-liscie (kat 21 st. od pionu, pozycja jak 'polar 51 st.' glowy, 16 x 10 mm: dokladnie jak w renifer_kregiel.stl od Dominika).
 Zamek liczony dokladnie (obrot profilu + manifold) tak jak w jajko_zamek_wycinek.py; obrys z zebrami z siatki (shapes.egg_F), poroze i uszy z parts.py.
   python3 jajko_renifer.py   -> out/jajko_renifer_miseczka.stl, out/jajko_renifer_czapka.stl (pozycje drukowane) + out/jajko_renifer.png"""
 import os, sys, math, time
@@ -23,9 +23,8 @@ R_TOP = 5.0                      # promien plaskiego sufitu
 Z_A = CEIL_Z - (R_CAV - R_TOP) / CONE
 ZR = ZS + GAP_Z                  # brzeg czapki
 PLA = 1.24
-LEAF_ANG = 15.0                  # uszy prawie pionowo: lekki kat 15 st. od pionu na zewnatrz (w duzym modelu leafAng = 50 st.)
-LEAF_IN = 2.0                    # uszy o tyle mm blizej siebie niz w duzym modelu (miejsce osadzenia zatwierdzone; przy kacie 15 st. ucho zachodzi na poroze w widoku z przodu w 87%, przy LEAF_IN = -1: 47%)
-P = RK.params()                # poroze ANT_K (3 poziomy) i uszy LEAF z duzego modelu
+LEAF_REF = dict(leafAng=21.0, leafPos=51.0, leafL=16.0, leafW=10.0)     # uszy jak w renifer_kregiel.stl od Dominika (zatwierdzone): dopasowane do jego przekroju, IoU 0,97
+P = {**RK.params(), **LEAF_REF}   # poroze ANT_K (3 poziomy) z duzego modelu; uszy-liscie: LEAF z duzego modelu, ale kat/pozycja/rozmiar wg LEAF_REF
 
 
 # ---------------------------------------------------------------------------------------------- ramki poroza i uszu na czapce
@@ -46,14 +45,19 @@ def ant_frame(s):
 
 
 def leaf_frame(s):
-    """ucho-lisc: punkt na powierzchni jajka w odleglosci od osi rr = R_glowy sin(leafPos) (jak 'polar 46 st.' glowy), w plaszczyznie srodka ucha
-    yc = Y0 + 2,5 - earT - leafGap - leafT/2 (tylna scianka ucha 'leafGap' = 1 mm przed przednia scianka poroza)"""
+    """ucho-lisc zakotwiczone WZGLEDEM POROZA dokladnie jak w duzym modelu: przesuniecie P0 ucha od P0 poroza liczone na kuli glowy
+    (rr = R_glowy sin(leafPos), z = headZ + R_glowy cos(leafPos)), przeniesione na P0 poroza na jajku; korzen ucha (b od -4,5) wchodzi w kopule.
+    Plaszczyzna srodka ucha: yc = Y0 + 2,5 - earT - leafGap - leafT/2 (tylna scianka ucha leafGap = 1 mm przed przednia scianka poroza)"""
     T = P["leafT"]
-    rr = P["headR"] * math.sin(math.radians(P["leafPos"])) - LEAF_IN
+    ph = math.radians(P["leafPos"])
+    rr = P["headR"] * math.sin(ph)
     yc = Y0 + 2.5 - P["earT"] - P["leafGap"] - T / 2.0
-    z = z_at_R(rr)
-    P0 = np.array([s * math.sqrt(max(rr * rr - yc * yc, 0.0)), yc + T / 2.0 - 2.5, z])
-    return mount_frame(s, P0, math.radians(LEAF_ANG), 0.0)
+    big0 = RK.SH.bunny_P0(1, P, P["earX"])                                   # P0 poroza w duzym modelu
+    dx = math.sqrt(max(rr * rr - yc * yc, 0.0)) - big0[0]
+    dz = P["headZ"] + P["headR"] * P["headK"] * math.cos(ph) - big0[2]
+    egg0 = np.array([P["earX"], Y0, z_at_R(math.hypot(P["earX"], Y0))])      # P0 poroza na jajku
+    P0 = np.array([s * (egg0[0] + dx), yc + T / 2.0 - 2.5, egg0[2] + dz])
+    return mount_frame(s, P0, math.radians(P["leafAng"]), 0.0)
 
 
 def frame_box(fr, ar, br, cr):

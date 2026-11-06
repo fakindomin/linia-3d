@@ -29,6 +29,7 @@ python3 jelen_chudy_glowa90.py     # jelen_stojacy_chudy_glowa90.stl (chudy ze s
 python3 jelen_siedzacy_chudy.py   # jelen_siedzacy_chudy.stl (siedzacy, szczuplejszy, dluga szyja, skala S_CH)
 python3 jelen_lezacy_chudy.py      # jelen_lezacy_chudy.stl (lezacy, szczuplejszy, dluga szyja, skala S_CH)
 python3 jajko_zamek_proba.py        # jajko_zamek_proba.stl (+ .png): probka laczenia na sztywny zatrzask
+python3 jajko_zamek_wycinek.py      # jajko_zamek_wycinek.stl (+ .png): wycinek jajka do testu zamka (miseczka + 3 czapki)
 python3 jelen_glowa90.py           # jelen_stojacy_glowa90.stl (glowa obrocona o 90 st.)
 python3 jelen.py                    # jelen_stojacy.stl (50 mm, gladki): kontrole wysokosci, srodka masy, stop, nawisow (naprawa nawisow: nawisy.py)
 python3 choinka_miska.py            # choinka_miska_100/80 (gladka, krawedzie zaokraglone): kontrola wymiarow, scianek, gladkosci i miejsca na stole (ok. 5 min)

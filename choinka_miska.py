@@ -1,5 +1,6 @@
 """Miska-choinka wg oryginalu 'Plätzchen-Schalen' (105 x 141 x 21 mm) - wariant GLADKI, wszystkie krawedzie zaokraglone.
-Wierny obrys oryginalu (smukly, 3 pietra, polki, pien) w skali 1,0 (104 x 140 x 21,2 mm) i 0,8 (83 x 112 x 17 mm: 3 szt. na stole 256 x 256).
+Obrys oryginalu (smukly, 3 pietra, polki, pien) w skali 1,0 (104 x 140 x 21,2 mm) i 0,8 (83 x 112 x 17 mm: 3 szt. na stole 256 x 256); jedyne odstepstwo: czubek 60 st. (TIP_ANG; oryginal 62,3),
+dzieki czemu 6 misek ulozonych czubkami do srodka styka sie krawedziami czubka bez nakladania.
 Bryla: dno 1,2 mm, sciany skosne FLARE od pionu (bez podpor), scianka 1,6 mm, wnetrze = obrys cofniety o scianke.
 Gladkie krawedzie: w planie zaokraglone wszystkie narozniki (wypukle R_CONVEX, wklesle R_REFLEX; na kazdej wysokosci osobno), brzeg gorny
 (R_RIM po obu stronach scianki), krawedz dolna (R_BOT), styk scianki z dnem wewnatrz (R_FLOOR) - gladkie minimum (wielomianowe) pol odleglosci.
@@ -26,8 +27,10 @@ R_RIM, R_BOT, R_FLOOR = 0.55, 0.4, 1.2   # promienie: brzeg gorny (obie krawedzi
 VOX = 0.25
 BED = 256.0                      # stol drukarki (P1S) [mm]
 SCALES = (1.0, 0.8)
+TIP_ANG = 60.0                   # pelny kat czubka (oryginal 62,3 st.): 60 st. = 6 szt. stykajacych sie czubkami w okregu, krawedzie czubka na dwusiecznych klinow 60 st.
+X1 = 49.0 * math.tan(math.radians(TIP_ANG / 2))   # polszerokosc pierwszego naroznika przy glebokosci 49,0 (oryginal 29,6; przy 60 st. = 28,29)
 # obrys oryginalu (prawa polowka, 100%): (polszerokosc, glebokosc od czubka); polki poziome, mala pionowa kreska przy narozniku i w kacie polki
-ORIG_RIGHT = [(29.6, 49.0), (29.6, 50.0), (20.8, 50.0), (20.8, 52.6),
+ORIG_RIGHT = [(X1, 49.0), (X1, 50.0), (20.8, 50.0), (20.8, 52.6),
               (40.8, 87.7), (40.8, 88.7), (32.0, 88.7), (32.0, 91.3),
               (52.0, 126.1), (52.0, 127.1), (24.1, 127.1), (24.1, 141.2)]
 QS = 24                          # segmenty na cwiartke luku zaokraglenia

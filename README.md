@@ -45,7 +45,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `jajko_zamek_wycinek.py` | jajko niespodzianka: **wycinek do testu zamka** (miseczka + 3 czapki, prawdziwy obrys i sztywność jajka, luz 0,10 / 0,15 / 0,20 mm), 57 g, bez podpór |
 | `jajko_renifer.py` | jajko niespodzianka **renifer**: miseczka + czapka z zamkiem nr 3 (luz 0,20 mm), poroże 3-poziomowe i uszy-liście z dużego modelu przytopione (ucho 1 mm przed porożem, uszy jak w `renifer_kregiel.stl` od Dominika: 21°, 16 × 10 mm), 127,8 mm, 65 g, bez podpór |
 | `nawisy.py` | pod druk bez podpór: `carve` (od dołu: każda warstwa wystaje najwyżej o stały skos, nic nie wisi w powietrzu, brzuch = namiot z nóg, spód pyska rośnie ku nosowi) i `slicer_overhang` (miara jak w Bambu: warstwa 0,2, progi 25–40°, prawdziwe wyspy) |
-| `choinka_miska.py` | miska-choinka wg „Plätzchen-Schalen”: wierny obrys oryginału w skali 1,0 i 0,8, wariant gładki ze wszystkimi krawędziami zaokrąglonymi (plan, brzeg, dno); parametry w nagłówku (promienie, ścianka, skos) |
+| `choinka_miska.py` | miska-choinka wg „Plätzchen-Schalen”: obrys oryginału w skali 1,0 i 0,8 z czubkiem 60° (6 szt. styka się czubkami bez nakładania), wariant gładki ze wszystkimi krawędziami zaokrąglonymi (plan, brzeg, dno); parametry w nagłówku (promienie, ścianka, skos) |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |
 | `meshclean.py`, `clean_stl.py` | usuwanie mikro-trójkątów bez otwierania siatki (wpięte w `lib.save`); `clean_stl.py` czyści istniejące pliki |

@@ -6,6 +6,7 @@ ostrze zwężone na ostatnich 2 mm do 0,45 mm od strony zewnętrznej (świadomy 
 Obrysy (wysokość ciasta): choinka 90 mm (czubek 60° jak w choinka_miska.py), renifer 90 mm (głowa + poroże 3-poziomowe + uszy-liście
 z renifer_kregiel.py, parametry uszu jak w jajko_renifer.py), bałwan 95 (kapelusz, szalik, marchewka), ludzik 90, gwiazdka 80; narożniki zaokrąglone (wypukłe 1,5-2, wklęsłe 2,5 mm).
   python3 foremki_piernik.py   -> out/foremka_{choinka,renifer,balwan,ludzik,gwiazdka}.stl + out/foremki_piernik.png
+  python3 foremki_piernik.py --json   -> artifact/swieta_outlines.json (obrysy dla artefaktu: foremki z regulowanym kołnierzem)
 Uwaga: wydruk FDM nie jest materiałem bezpiecznym dla żywności na stałe (szczeliny między warstwami); do krótkiego kontaktu z ciastem, myć ręcznie."""
 import os, sys, math, time
 import numpy as np
@@ -142,6 +143,20 @@ def feature_check(S, r=2.4):
     return 100.0 * S.difference(o).area / S.area
 
 
+def export_outlines(path=None):
+    """obrysy ciasta (wnętrze ścianki) wszystkich foremek jako JSON dla artefaktu „Świąteczne dodatki” (artifact/swieta_outlines.json)"""
+    import json
+    path = path or os.path.join(HERE, "artifact", "swieta_outlines.json")
+    out = {}
+    for n in SHAPES:
+        S = dough(n)
+        out[n] = dict(name=NAMES[n], size=SIZES[n], ext=[[round(x, 3), round(y, 3)] for x, y in S.exterior.coords[:-1]],
+                      holes=[[[round(x, 3), round(y, 3)] for x, y in h.coords[:-1]] for h in S.interiors])
+    out["_params"] = dict(WALL=WALL, EDGE=EDGE, TAPER=TAPER, H_TOT=H_TOT, FL_T=FL_T, FL_W=FL_W, STEPS=STEPS)
+    json.dump(out, open(path, "w", encoding="utf-8"), separators=(",", ":"), ensure_ascii=False)
+    return path
+
+
 def main():
     t0 = time.time()
     os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
@@ -174,4 +189,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--json" in sys.argv:
+        print(export_outlines()); sys.exit(0)
     sys.exit(main())

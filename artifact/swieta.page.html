@@ -1,0 +1,754 @@
+<title>Świąteczne dodatki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+  :root {
+    --bg: #f3eee5; --surface: #fbf8f2; --ink: #2a2521; --muted: #6a6157; --line: #ddd3c4;
+    --accent: #566b58; --accent-ink: #ffffff; --accent-soft: #e3e9df; --clay: #b8613f; --warn: #a63f22;
+    --stage-a: #3a352f; --stage-b: #221f1b; --field: #ffffff;
+    --serif: "Fraunces", "Iowan Old Style", Georgia, serif; --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1815; --surface: #25211d; --ink: #efe8dc; --muted: #aaa093; --line: #3a342e;
+      --accent: #a3b9a4; --accent-ink: #1b1815; --accent-soft: #2f3830; --clay: #dc8a66; --warn: #e88f70; --field: #1f1c19; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1815; --surface: #25211d; --ink: #efe8dc; --muted: #aaa093; --line: #3a342e;
+    --accent: #a3b9a4; --accent-ink: #1b1815; --accent-soft: #2f3830; --clay: #dc8a66; --warn: #e88f70; --field: #1f1c19; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--sans); margin: 0; padding-inline: 16px; padding-block: 20px 40px; }
+  .app { max-width: 720px; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h1 { font: 600 30px/1.1 var(--serif); margin: 6px 0 8px; text-wrap: balance; }
+  .lede { margin: 0; color: var(--muted); max-width: 52ch; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+  .tabs button { font: 500 15px var(--sans); color: var(--muted); background: transparent; border: 0; border-radius: 10px; padding: 10px 6px; min-height: 44px; cursor: pointer; }
+  .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .tabs button:focus-visible, .chip:focus-visible, .primary:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .stage { position: relative; border-radius: 18px; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, var(--stage-a), var(--stage-b)); aspect-ratio: 4 / 3; max-height: 72vh; width: 100%; }
+  .stage.tall { aspect-ratio: 3 / 4; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; cursor: grab; }
+  .stage .bar { position: absolute; inset-inline: 10px; bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; justify-content: space-between; pointer-events: none; }
+  .stage .bar > * { pointer-events: auto; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: #e9e0d2; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px; }
+  .chips { display: flex; gap: 6px; }
+  .chip { font: 500 13px var(--sans); color: #efe8dc; background: rgba(20, 18, 15, .55); border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 6px 12px; min-height: 32px; cursor: pointer; backdrop-filter: blur(4px); }
+  .chip[aria-pressed="true"] { background: #efe8dc; color: #221f1b; }
+  .stage .msg { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 24px; color: #efe8dc; font-size: 14px; }
+  .stage.err .msg { display: flex; }
+  .stage .busy { position: absolute; top: 10px; inset-inline-end: 12px; font-size: 12px; color: #efe8dc; opacity: 0; transition: opacity .15s; }
+  .stage.loading .busy { opacity: .85; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .panel[hidden] { display: none; }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .lab { display: flex; justify-content: space-between; gap: 12px; font-weight: 500; }
+  .lab output { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 400; }
+  .hint { margin: 0; font-size: 13px; color: var(--muted); }
+  input[type="text"] { font: 500 20px var(--sans); color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%; min-height: 52px; }
+  input[type="text"]::placeholder { color: var(--muted); opacity: .7; font-weight: 400; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); min-height: 32px; margin: 0; }
+  .shapes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .shapes button { font: 500 14px var(--sans); color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; min-height: 40px; cursor: pointer; }
+  .shapes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px 16px; margin: 0; }
+  .facts div { min-width: 0; }
+  .facts dt { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .facts dd { margin: 2px 0 0; font: 500 17px var(--sans); font-variant-numeric: tabular-nums; }
+  .warn { color: var(--warn); font-weight: 500; }
+  .primary { font: 600 16px var(--sans); color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 14px; padding: 14px 18px; min-height: 52px; width: 100%; cursor: pointer; }
+  .primary:disabled { opacity: .45; cursor: not-allowed; }
+  .dlmsg { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--muted); }
+  .tips { background: transparent; border-inline-start: 3px solid var(--accent); padding: 2px 0 2px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--muted); }
+  .tips p { margin: 0; }
+  .tips b { color: var(--ink); font-weight: 600; }
+  footer { font-size: 12px; color: var(--muted); }
+  @media (min-width: 640px) { body { padding-block: 32px 56px; } h1 { font-size: 38px; } .stage { aspect-ratio: 16 / 10; } .stage.tall { aspect-ratio: 4 / 5; max-height: 80vh; } }
+</style>
+
+<main class="app">
+  <header>
+    <p class="eyebrow">Linia japandi · Bambu P1S · PETG · bez podpór</p>
+    <h1>Świąteczne dodatki</h1>
+    <p class="lede">Wpisz imię albo ustaw rozmiar, obejrzyj model z każdej strony i pobierz gotowy STL.</p>
+  </header>
+
+  <div class="tabs" role="group" aria-label="Model">
+    <button id="tab-etykieta" aria-pressed="true">Etykieta</button>
+    <button id="tab-czubek" aria-pressed="false">Czubek</button>
+    <button id="tab-foremki" aria-pressed="false">Foremki</button>
+  </div>
+
+  <section class="stage" id="stage" aria-label="Podgląd 3D: przeciągnij, aby obrócić, uszczypnij, aby przybliżyć">
+    <canvas id="cv"></canvas>
+    <div class="msg" id="stagemsg">Podgląd 3D niedostępny w tej przeglądarce. Pobieranie nadal działa.</div>
+    <div class="busy" id="busy">liczę…</div>
+    <div class="bar">
+      <div class="legend" id="legend"></div>
+      <div class="chips"><button class="chip" id="chip-sec" aria-pressed="false">Przekrój</button><button class="chip" id="chip-view">Widok</button></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-etykieta">
+    <label class="field">
+      <span class="lab">Imię na etykiecie</span>
+      <input type="text" id="name" maxlength="26" placeholder="np. Ania" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
+      <p class="hint">Na etykiecie będzie napis „Dla” i pod nim to, co wpiszesz. Polskie znaki działają, szerokość dopasowuje się sama.</p>
+    </label>
+    <label class="field">
+      <span class="lab">Wysokość liter imienia <output id="cap-o"></output></span>
+      <input type="range" id="cap" min="7" max="15" step="0.5" value="11">
+    </label>
+  </section>
+
+  <section class="panel" id="panel-czubek" hidden>
+    <label class="field">
+      <span class="lab">Średnica czubka choinki <output id="top-o"></output></span>
+      <input type="range" id="top" min="8" max="30" step="0.5" value="18">
+      <p class="hint">Zmierz suwmiarką miejsce, na które czubek ma wejść. Wnęka ma 0,6 mm luzu.</p>
+    </label>
+    <label class="field">
+      <span class="lab">Wysokość całkowita <output id="h-o"></output></span>
+      <input type="range" id="h" min="120" max="240" step="5" value="200">
+    </label>
+    <label class="field">
+      <span class="lab">Średnica kuli <output id="bulb-o"></output></span>
+      <input type="range" id="bulb" min="40" max="100" step="1" value="62">
+    </label>
+  </section>
+
+  <section class="panel" id="panel-foremki" hidden>
+    <div class="field">
+      <span class="lab">Kształt</span>
+      <div class="shapes" id="shapes"></div>
+    </div>
+    <label class="field">
+      <span class="lab">Rozmiar ciasta (wysokość) <output id="scale-o"></output></span>
+      <input type="range" id="scale" min="0.7" max="1.3" step="0.05" value="1">
+    </label>
+    <label class="field">
+      <span class="lab">Kołnierz (brim): szerokość <output id="flw-o"></output></span>
+      <input type="range" id="flw" min="3" max="10" step="0.5" value="5">
+    </label>
+    <label class="field">
+      <span class="lab">Kołnierz (brim): grubość <output id="flt-o"></output></span>
+      <input type="range" id="flt" min="1.6" max="4" step="0.2" value="2">
+      <p class="hint">Kołnierz biegnie dookoła całej foremki, od strony dociskania, i jest częścią modelu na stałe. Na podglądzie ma kolor glinki.</p>
+    </label>
+  </section>
+
+  <section class="panel">
+    <dl class="facts" id="facts"></dl>
+    <button class="primary" id="dl" disabled>Pobierz STL</button>
+    <p class="dlmsg" id="dlmsg" role="status"></p>
+  </section>
+
+  <section class="tips" id="tips"></section>
+  <footer id="foot">Czcionka etykiet: Poppins Bold (SIL OFL). Geometria liczona w przeglądarce tym samym algorytmem co skrypty Pythona w repozytorium linia-3d.</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/earcut@2.2.4/dist/earcut.min.js"></script>
+<script>
+/* Rdzeń geometrii artefaktu „Świąteczne dodatki”: port algorytmów z etykieta.py, foremki_piernik.py (kołnierz, ścianka, ostrze) i czubek_choinkowy.py.
+   Python = źródło prawdy; ten plik ma te same stałe i wzory (test: artifact/test_swieta.py porównuje objętości i wymiary).
+   Zależności (wstrzykiwane): ClipperLib (clipper-lib 6.4.2), opentype (opentype.js 1.3.4), triangulate(contour, holes) -> płaska lista indeksów (earcut).
+   UMD: w przeglądarce window.SwietaCore = create; w Node module.exports = create. Wymiary w mm, z = 0 to stół. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory; else root.SwietaCore = factory;
+})(typeof self !== 'undefined' ? self : this, function create(deps) {
+  'use strict';
+  const { ClipperLib, opentype, triangulate } = deps;
+  const SC = 1000;                    // jednostka Clippera: 1 µm
+  const ARC_TOL = 10;                 // tolerancja łuków offsetu: 0,01 mm
+  const PETG = 1.27;
+
+  // ------------------------------------------------------------------------------------------ pomocnicze (Clipper)
+  const toPath = (pts) => pts.map((p) => ({ X: Math.round(p[0] * SC), Y: Math.round(p[1] * SC) }));
+  const area2 = (path) => { let s = 0; for (let i = 0, n = path.length; i < n; i++) { const a = path[i], b = path[(i + 1) % n]; s += a.X * b.Y - b.X * a.Y; } return s; };
+  const orient = (path, ccw) => ((area2(path) > 0) === ccw ? path : path.slice().reverse());
+  function clip(type, subj, cl, fill) {
+    const c = new ClipperLib.Clipper(); c.PreserveCollinear = true;
+    c.AddPaths(subj, ClipperLib.PolyType.ptSubject, true);
+    if (cl && cl.length) c.AddPaths(cl, ClipperLib.PolyType.ptClip, true);
+    const sol = new ClipperLib.Paths();
+    const f = fill === undefined ? ClipperLib.PolyFillType.pftNonZero : fill;
+    c.Execute(type, sol, f, f);
+    return sol;
+  }
+  const union = (a, b, fill) => clip(ClipperLib.ClipType.ctUnion, a, b, fill);
+  const diff = (a, b) => clip(ClipperLib.ClipType.ctDifference, a, b);
+  function offset(paths, delta) {
+    const co = new ClipperLib.ClipperOffset(2, ARC_TOL);
+    co.AddPaths(paths, ClipperLib.JoinType.jtRound, ClipperLib.EndType.etClosedPolygon);
+    const sol = new ClipperLib.Paths();
+    co.Execute(sol, delta * SC);
+    return sol;
+  }
+  function walkTree(paths, fn) {            // fn(zewnętrzny, [dziury]) dla każdego obszaru, wraz z wyspami w dziurach
+    const c = new ClipperLib.Clipper(); c.PreserveCollinear = true;
+    c.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+    const tree = new ClipperLib.PolyTree();
+    c.Execute(ClipperLib.ClipType.ctUnion, tree, ClipperLib.PolyFillType.pftEvenOdd, ClipperLib.PolyFillType.pftEvenOdd);
+    const rec = (nodes) => { for (const nd of nodes) { const holes = nd.Childs(); fn(orient(nd.Contour(), true), holes.map((h) => orient(h.Contour(), false))); for (const h of holes) rec(h.Childs()); } };
+    rec(tree.Childs());
+  }
+  const polyArea = (paths) => paths.reduce((s, p) => s + area2(p), 0) / 2 / (SC * SC);     // dla regionów: kontury zewn. dodatnie, dziury ujemne
+
+  // ------------------------------------------------------------------------------------------ siatka
+  class MB {                                // siatka ze sklejaniem wierzchołków o współrzędnych całkowitych (µm)
+    constructor() { this.pos = []; this.idx = []; this.map = new Map(); }
+    v(X, Y, z) { const k = X + '_' + Y + '_' + Math.round(z * 1e4); let i = this.map.get(k); if (i === undefined) { i = this.pos.length / 3; this.pos.push(X / SC, Y / SC, z); this.map.set(k, i); } return i; }
+    t(a, b, c) { if (a !== b && b !== c && a !== c) this.idx.push(a, b, c); }
+    /* earcut (połączenia dziur, pominięte współliniowe wierzchołki) daje złącza T: długa krawędź jednego trójkąta leży nad kilkoma krótkimi krawędziami sąsiednich ścian.
+       Naprawa: dla każdej krawędzi bez pary dzielimy jej trójkąt wachlarzem przez wierzchołki leżące dokładnie na tej krawędzi. */
+    repairTJ() {
+      const I = this.idx, P = this.pos, dirs = new Set();
+      for (let i = 0; i < I.length; i += 3) for (let k = 0; k < 3; k++) dirs.add(I[i + k] + '_' + I[i + (k + 1) % 3]);
+      const open = [], vo = new Set();
+      for (let i = 0; i < I.length; i += 3) for (let k = 0; k < 3; k++) { const a = I[i + k], b = I[i + (k + 1) % 3]; if (!dirs.has(b + '_' + a)) { open.push([a, b]); vo.add(a); vo.add(b); } }
+      if (!open.length) return 0;
+      const V = [...vo], chains = new Map();
+      for (const [a, b] of open) {
+        const ax = P[a * 3], ay = P[a * 3 + 1], az = P[a * 3 + 2], dx = P[b * 3] - ax, dy = P[b * 3 + 1] - ay, dz = P[b * 3 + 2] - az, L2 = dx * dx + dy * dy + dz * dz, c = [];
+        for (const v of V) {
+          if (v === a || v === b) continue;
+          const px = P[v * 3] - ax, py = P[v * 3 + 1] - ay, pz = P[v * 3 + 2] - az, t = (px * dx + py * dy + pz * dz) / L2;
+          if (t <= 1e-9 || t >= 1 - 1e-9) continue;
+          if (Math.hypot(px - t * dx, py - t * dy, pz - t * dz) < 1e-6) c.push([t, v]);
+        }
+        if (c.length) { c.sort((x, y) => x[0] - y[0]); chains.set(a + '_' + b, [a].concat(c.map((q) => q[1]), [b])); }
+      }
+      if (!chains.size) return open.length;
+      const out = [], stack = [];
+      for (let i = 0; i < I.length; i += 3) stack.push([I[i], I[i + 1], I[i + 2]]);
+      while (stack.length) {
+        const t = stack.pop(); let split = false;
+        for (let e = 0; e < 3 && !split; e++) {
+          const a = t[e], b = t[(e + 1) % 3], c = t[(e + 2) % 3], ch = chains.get(a + '_' + b);
+          if (!ch) continue;
+          for (let k = 0; k < ch.length - 1; k++) stack.push([ch[k], ch[k + 1], c]);
+          split = true;
+        }
+        if (!split) out.push(t[0], t[1], t[2]);
+      }
+      this.idx = out;
+      return 0;
+    }
+    done() { this.repairTJ(); return { positions: Float32Array.from(this.pos), indices: Uint32Array.from(this.idx) }; }
+  }
+
+  function faceTris(mb, outer, holes, z, up) {
+    const ring = (p) => p.map((q) => [q.X, q.Y]);
+    const O = ring(outer), Hs = holes.map(ring);
+    const flat = O.concat(...Hs);
+    const ids = flat.map((q) => mb.v(q[0], q[1], z));
+    const idx = triangulate(O.map((q) => [q[0] / SC, q[1] / SC]), Hs.map((h) => h.map((q) => [q[0] / SC, q[1] / SC])));
+    for (let q = 0; q < idx.length; q += 3) {
+      const i0 = idx[q], i1 = idx[q + 1], i2 = idx[q + 2];
+      const a = flat[i0], b = flat[i1], c = flat[i2];
+      const s = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]);
+      if (s === 0) continue;
+      if ((s > 0) === up) mb.t(ids[i0], ids[i1], ids[i2]); else mb.t(ids[i0], ids[i2], ids[i1]);
+    }
+  }
+  function wallTris(mb, path, z0, z1) {     // kontur CCW (zewnętrzny) lub CW (dziura): normalna na prawo od kierunku = na zewnątrz materiału
+    for (let i = 0, n = path.length; i < n; i++) {
+      const a = path[i], b = path[(i + 1) % n];
+      const a0 = mb.v(a.X, a.Y, z0), b0 = mb.v(b.X, b.Y, z0), b1 = mb.v(b.X, b.Y, z1), a1 = mb.v(a.X, a.Y, z1);
+      mb.t(a0, b0, b1); mb.t(a0, b1, a1);
+    }
+  }
+  /* bryła z zagnieżdżonych płyt 2,5D: slabs = [{z0, z1, region}], każdy następny region zawiera się w poprzednim, z0[i+1] = z1[i] */
+  function stack(slabs) {
+    const mb = new MB();
+    slabs.forEach((s, i) => {
+      walkTree(s.region, (o, hs) => { wallTris(mb, o, s.z0, s.z1); hs.forEach((h) => wallTris(mb, h, s.z0, s.z1)); });
+      const nxt = slabs[i + 1];
+      const top = nxt ? diff(s.region, nxt.region) : s.region;
+      walkTree(top, (o, hs) => faceTris(mb, o, hs, s.z1, true));
+      if (i === 0) walkTree(s.region, (o, hs) => faceTris(mb, o, hs, s.z0, false));
+    });
+    return mb.done();
+  }
+
+  // ------------------------------------------------------------------------------------------ wymiary / eksport
+  function meshInfo(m) {
+    const P = m.positions, I = m.indices;
+    let vol = 0, area = 0; const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+    for (let i = 0; i < P.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], P[i + k]); hi[k] = Math.max(hi[k], P[i + k]); }
+    for (let i = 0; i < I.length; i += 3) {
+      const a = I[i] * 3, b = I[i + 1] * 3, c = I[i + 2] * 3;
+      vol += P[a] * (P[b + 1] * P[c + 2] - P[b + 2] * P[c + 1]) - P[a + 1] * (P[b] * P[c + 2] - P[b + 2] * P[c]) + P[a + 2] * (P[b] * P[c + 1] - P[b + 1] * P[c]);
+      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      area += 0.5 * Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx);
+    }
+    vol /= 6;
+    return { volume: vol, area, tris: I.length / 3, extents: [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]], lo, hi, grams: vol / 1000 * PETG };
+  }
+  function toStl(m) {                       // binarny STL z siatki indeksowanej
+    const P = m.positions, I = m.indices, n = I.length / 3;
+    const buf = new ArrayBuffer(84 + 50 * n), dv = new DataView(buf);
+    const head = 'linia-3d swieta_core'; for (let i = 0; i < head.length; i++) dv.setUint8(i, head.charCodeAt(i));
+    dv.setUint32(80, n, true);
+    let o = 84;
+    for (let t = 0; t < n; t++) {
+      const a = I[3 * t] * 3, b = I[3 * t + 1] * 3, c = I[3 * t + 2] * 3;
+      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+      dv.setFloat32(o, nx, true); dv.setFloat32(o + 4, ny, true); dv.setFloat32(o + 8, nz, true);
+      for (const q of [a, b, c]) { dv.setFloat32(o + 12, P[q], true); dv.setFloat32(o + 16, P[q + 1], true); dv.setFloat32(o + 20, P[q + 2], true); o += 12; }
+      dv.setUint16(o + 12, 0, true); o += 14;
+    }
+    return buf;
+  }
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(u8) { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+  function zipStore(filename, data) {       // ZIP bez kompresji z jednym plikiem (nazwa UTF-8)
+    const name = new TextEncoder().encode(filename), d = new Uint8Array(data), crc = crc32(d), n = name.length, sz = d.length;
+    const out = new ArrayBuffer(30 + n + sz + 46 + n + 22), dv = new DataView(out), u8 = new Uint8Array(out);
+    const date = ((2026 - 1980) << 9) | (11 << 5) | 1, time = 0;
+    let o = 0;
+    dv.setUint32(o, 0x04034b50, true); dv.setUint16(o + 4, 20, true); dv.setUint16(o + 6, 0x0800, true); dv.setUint16(o + 8, 0, true); dv.setUint16(o + 10, time, true); dv.setUint16(o + 12, date, true);
+    dv.setUint32(o + 14, crc, true); dv.setUint32(o + 18, sz, true); dv.setUint32(o + 22, sz, true); dv.setUint16(o + 26, n, true); dv.setUint16(o + 28, 0, true);
+    u8.set(name, o + 30); u8.set(d, o + 30 + n); o += 30 + n + sz;
+    const cd = o;
+    dv.setUint32(o, 0x02014b50, true); dv.setUint16(o + 4, 20, true); dv.setUint16(o + 6, 20, true); dv.setUint16(o + 8, 0x0800, true); dv.setUint16(o + 10, 0, true); dv.setUint16(o + 12, time, true); dv.setUint16(o + 14, date, true);
+    dv.setUint32(o + 16, crc, true); dv.setUint32(o + 20, sz, true); dv.setUint32(o + 24, sz, true); dv.setUint16(o + 28, n, true); dv.setUint16(o + 30, 0, true); dv.setUint16(o + 32, 0, true);
+    dv.setUint16(o + 34, 0, true); dv.setUint16(o + 36, 0, true); dv.setUint32(o + 38, 0, true); dv.setUint32(o + 42, 0, true);
+    u8.set(name, o + 46); o += 46 + n;
+    dv.setUint32(o, 0x06054b50, true); dv.setUint16(o + 4, 0, true); dv.setUint16(o + 6, 0, true); dv.setUint16(o + 8, 1, true); dv.setUint16(o + 10, 1, true);
+    dv.setUint32(o + 12, 46 + n, true); dv.setUint32(o + 16, cd, true); dv.setUint16(o + 20, 0, true);
+    return out;
+  }
+
+  // ------------------------------------------------------------------------------------------ ETYKIETA (etykieta.py)
+  const LB = { PT: 2.0, RAISE: 0.8, HOLE_D: 4.2, RING_W: 2.2, HOLE_X: 6.4, RIM_IN: 1.4, RIM_W: 1.0, CORNER: 5.0, TEXT_M: 1.4, H_MIN: 32.0, W_MIN: 60.0, CAP_DLA_MIN: 6.0, GAP: 3.0, TRACK: 0.06, CAP_DEFAULT: 11.0, CAP_MIN: 7.0, CAP_MAX: 15.0, CURVE_N: 6, ARC_N: 16 };
+
+  function rrect(cx, cy, w, h, r) {
+    r = Math.min(r, w / 2 - 1e-6, h / 2 - 1e-6);
+    const pts = [];
+    for (const [sx, sy, a0] of [[1, 1, 0], [-1, 1, 90], [-1, -1, 180], [1, -1, 270]]) {
+      const ccx = cx + sx * (w / 2 - r), ccy = cy + sy * (h / 2 - r);
+      for (let i = 0; i <= LB.ARC_N; i++) { const a = (a0 + 90 * i / LB.ARC_N) * Math.PI / 180; pts.push([ccx + r * Math.cos(a), ccy + r * Math.sin(a)]); }
+    }
+    return [toPath(pts)];
+  }
+  function circle(cx, cy, r, n) {
+    const pts = []; for (let i = 0; i < n; i++) pts.push([cx + r * Math.cos(2 * Math.PI * i / n), cy + r * Math.sin(2 * Math.PI * i / n)]);
+    return [toPath(pts)];
+  }
+  function textPaths(font, s, cap, x0, y0, measureOnly) {
+    const k = cap / font.tables.os2.sCapHeight;
+    const paths = []; let x = 0;
+    for (const ch of s) {
+      let g = font.charToGlyph(ch); if (!g || g.index === 0) g = font.charToGlyph('?');
+      const rings = []; let cur = null;
+      const N = LB.CURVE_N;
+      for (const c of g.path.commands) {
+        if (c.type === 'M') cur = [[c.x, c.y]];
+        else if (c.type === 'L') cur.push([c.x, c.y]);
+        else if (c.type === 'Q') { const p0 = cur[cur.length - 1]; for (let i = 1; i <= N; i++) { const t = i / N, u = 1 - t; cur.push([u * u * p0[0] + 2 * u * t * c.x1 + t * t * c.x, u * u * p0[1] + 2 * u * t * c.y1 + t * t * c.y]); } }
+        else if (c.type === 'C') { const p0 = cur[cur.length - 1]; for (let i = 1; i <= N; i++) { const t = i / N, u = 1 - t; cur.push([u * u * u * p0[0] + 3 * u * u * t * c.x1 + 3 * u * t * t * c.x2 + t * t * t * c.x, u * u * u * p0[1] + 3 * u * u * t * c.y1 + 3 * u * t * t * c.y2 + t * t * t * c.y]); } }
+        else if (c.type === 'Z') { if (cur && cur.length > 2) rings.push(cur); cur = null; }
+      }
+      if (cur && cur.length > 2) rings.push(cur);
+      if (!measureOnly) for (const r of rings) paths.push(toPath(r.map((q) => [x0 + x + q[0] * k, y0 + q[1] * k])));
+      x += g.advanceWidth * k + LB.TRACK * cap;
+    }
+    x -= LB.TRACK * cap;
+    return { paths: measureOnly ? [] : union(paths, null, ClipperLib.PolyFillType.pftNonZero), width: x };
+  }
+  function labelLayout(font, name, cap) {
+    cap = Math.min(Math.max(cap, LB.CAP_MIN), LB.CAP_MAX);
+    const capD = Math.max(LB.CAP_DLA_MIN, 0.5 * cap);
+    const wn = textPaths(font, name, cap, 0, 0, true).width, wd = textPaths(font, 'Dla', capD, 0, 0, true).width;
+    const wt = Math.max(wn, wd), M = LB.RIM_IN + LB.RIM_W + LB.TEXT_M;
+    const H = Math.max(LB.H_MIN, 2 * M + capD + LB.GAP + 1.32 * cap);
+    const zone0 = LB.HOLE_X + LB.HOLE_D / 2 + LB.RING_W + LB.TEXT_M;
+    const W = Math.max(LB.W_MIN, zone0 + wt + M);
+    return { cap, capD, wn, wd, wt, M, H, W, zone0 };
+  }
+  function buildLabel(font, name, cap) {
+    const L = labelLayout(font, name, cap == null ? LB.CAP_DEFAULT : cap), W = L.W, H = L.H;
+    const S = rrect(0, 0, W, H, LB.CORNER);
+    const hx = -W / 2 + LB.HOLE_X, hole = circle(hx, 0, LB.HOLE_D / 2, 48), ring = circle(hx, 0, LB.HOLE_D / 2 + LB.RING_W, 64);
+    const rim = diff(rrect(0, 0, W - 2 * LB.RIM_IN, H - 2 * LB.RIM_IN, LB.CORNER - LB.RIM_IN), rrect(0, 0, W - 2 * (LB.RIM_IN + LB.RIM_W), H - 2 * (LB.RIM_IN + LB.RIM_W), LB.CORNER - LB.RIM_IN - LB.RIM_W));
+    const xc = -W / 2 + L.zone0 + (W - L.zone0 - L.M) / 2, top = H / 2 - L.M;
+    const yDla = top - L.capD, yName = yDla - LB.GAP - L.cap, xLeft = xc - L.wt / 2;
+    const dla = textPaths(font, 'Dla', L.capD, xLeft, yDla).paths;
+    const nm = textPaths(font, name, L.cap, xLeft + (L.wt - L.wn) / 2, yName).paths;
+    const raised = diff(union(union(union(rim, ring), dla), nm), hole);
+    const plate = diff(S, hole);
+    const mesh = stack([{ z0: 0, z1: LB.PT, region: plate }, { z0: LB.PT, z1: LB.PT + LB.RAISE, region: raised }]);
+    return { mesh, info: Object.assign(meshInfo(mesh), { W, H, cap: L.cap, plateArea: polyArea(plate), raisedArea: polyArea(raised), expectedVolume: polyArea(plate) * LB.PT + polyArea(raised) * LB.RAISE }) };
+  }
+
+  // ------------------------------------------------------------------------------------------ FOREMKA (foremki_piernik.py)
+  const CT = { WALL: 1.2, EDGE: 0.45, TAPER: 2.0, H_TOT: 16.0, FL_T: 2.0, FL_W: 5.0, STEPS: 8 };
+  function buildCutter(outline, opt) {
+    opt = Object.assign({ scale: 1, FL_T: CT.FL_T, FL_W: CT.FL_W }, opt || {});
+    const k = opt.scale;
+    const S = [orient(toPath(outline.ext.map((p) => [p[0] * k, p[1] * k])), true)];
+    (outline.holes || []).forEach((h) => S.push(orient(toPath(h.map((p) => [p[0] * k, p[1] * k])), false)));
+    const ring = (d) => diff(offset(S, d), S);
+    const slabs = [{ z0: 0, z1: opt.FL_T, region: ring(CT.WALL + opt.FL_W) }, { z0: opt.FL_T, z1: CT.H_TOT - CT.TAPER, region: ring(CT.WALL) }];
+    const dz = CT.TAPER / CT.STEPS;
+    for (let i = 0; i < CT.STEPS; i++) slabs.push({ z0: CT.H_TOT - CT.TAPER + i * dz, z1: CT.H_TOT - CT.TAPER + (i + 1) * dz, region: ring(CT.WALL - (CT.WALL - CT.EDGE) * (i + 1) / CT.STEPS) });
+    const mesh = stack(slabs);
+    const info = meshInfo(mesh);
+    const bb = [1e9, 1e9, -1e9, -1e9]; S[0].forEach((p) => { bb[0] = Math.min(bb[0], p.X / SC); bb[1] = Math.min(bb[1], p.Y / SC); bb[2] = Math.max(bb[2], p.X / SC); bb[3] = Math.max(bb[3], p.Y / SC); });
+    info.dough = [bb[2] - bb[0], bb[3] - bb[1]]; info.doughArea = polyArea(S);
+    return { mesh, info };
+  }
+
+  // ------------------------------------------------------------------------------------------ CZUBEK (czubek_choinkowy.py)
+  const TP = { CLEAR: 0.3, WALL_T: 2.7, DEPTH: 26.0, CONE: 1.3, CONE_OUT: 1.15, R_FLAT: 5.0, BULB_FLAT: 0.85, NECK: 0.21, SPIRE_BASE: 0.44, SPIRE_P: 2.2, R_TIP: 1.6, L_NECK: 2.0, K_NECK: 2.5, K_SHOULDER: 5.0, EPS: 0.01, SEG_MAX: 3.0, SEG_TRANS: 0.6, RIB_AMP: 0.8, RIB_PITCH: 3.4, DEFAULTS: { top: 18, h: 200, bulb: 62 } };
+  const smax = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.max(a, b) + h * h * k * 0.25; };
+  const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
+  const sstep = (z, z0, z1) => { const t = Math.min(Math.max((z - z0) / (z1 - z0), 0), 1); return t * t * (3 - 2 * t); };
+  const rib = (N, th) => { const c = Math.cos(N * th); return Math.sign(c) * Math.pow(Math.abs(c), 0.8); };
+  const ribAmp = (r) => TP.RIB_AMP * Math.min(Math.max((r - 4) / 6, 0), 1);
+
+  function topperGeo(top, h, bulb, check) {
+    if (check === undefined) check = true;
+    const g = { top, H: h, a: bulb / 2 };
+    g.b = TP.BULB_FLAT * g.a;
+    g.r_h = top / 2 + TP.CLEAR; g.r_s = g.r_h + TP.WALL_T; g.Z0 = TP.DEPTH - 4;
+    const fa = g.a / g.b; g.phi_j = Math.atan(fa / TP.CONE_OUT);
+    g.r_j = g.a * Math.sin(g.phi_j);
+    if (check && !(g.r_j - g.r_s > 1.0)) throw new Error('Kula za mała względem tulei');
+    g.z_j = g.Z0 + (g.r_j - g.r_s) / TP.CONE_OUT;
+    g.z_e = g.z_j + g.b * Math.cos(g.phi_j); g.z_dome = g.z_e + g.b;
+    g.k1 = Math.min(6.0, 0.8 * (g.r_j - g.r_s));
+    g.r_neck = Math.max(TP.NECK * g.a, 4.5);
+    g.z_ns = g.z_dome + TP.L_NECK;
+    g.r_b = Math.max(TP.SPIRE_BASE * g.a, g.r_neck + 3.0);
+    g.z_sb = g.z_ns + (g.r_b - g.r_neck) / TP.CONE_OUT;
+    if (check && !(g.H - g.z_sb > 40)) throw new Error('Za niski czubek względem kuli');
+    g.z_t = g.H - TP.R_TIP;
+    g.trans = [[g.Z0 + 1.0, g.z_j], [g.z_e + 0.80 * g.b, g.z_e + 0.96 * g.b]];
+    g.Ns = [Math.round(2 * Math.PI * g.r_s / TP.RIB_PITCH), Math.round(2 * Math.PI * g.a / TP.RIB_PITCH), Math.round(2 * Math.PI * g.r_b / TP.RIB_PITCH)];
+    g.ceil = TP.DEPTH + (g.r_h - TP.R_FLAT) / TP.CONE;
+    g.taper = (z) => { const t = (z - g.z_sb) / (g.z_t - g.z_sb); return TP.R_TIP + (g.r_b - TP.R_TIP) * Math.pow(Math.max(1 - t, 0), TP.SPIRE_P); };
+    g.R = (z) => {
+      const ell = g.a * Math.sqrt(Math.max(1 - ((z - g.z_e) / g.b) ** 2, 0));
+      const lower = z <= g.z_j ? smax(g.r_s, g.r_s + TP.CONE_OUT * (z - g.Z0), g.k1) : ell;
+      const N = smin(smax(g.r_neck, g.r_neck + TP.CONE_OUT * (z - g.z_ns), TP.K_NECK), g.taper(z), TP.K_SHOULDER);
+      const core = z < g.z_dome + 2.0 ? smax(lower, N, TP.K_NECK) : N;
+      const cap = z > g.z_t ? Math.sqrt(Math.max(TP.R_TIP ** 2 - (z - g.z_t) ** 2, 0)) : Infinity;
+      return Math.min(core, cap);
+    };
+    g.ribField = (th, z) => {
+      let w = [], wPrev = 1;
+      for (const [za, zb] of g.trans) { const s = sstep(z, za, zb); w.push(wPrev * (1 - s)); wPrev *= s; }
+      w.push(wPrev);
+      let out = 0; for (let i = 0; i < w.length; i++) if (w[i] > 0) out += w[i] * rib(g.Ns[i], th);
+      return out;
+    };
+    return g;
+  }
+  function topperRings(g) {
+    const n = Math.floor(g.H / 0.02) + 1, zz = new Float64Array(n), rr = new Float64Array(n);
+    for (let i = 0; i < n; i++) { zz[i] = g.H * i / (n - 1); rr[i] = g.R(zz[i]); }
+    const keep = new Uint8Array(n); keep[0] = keep[n - 1] = 1;
+    const st = [[0, n - 1]];
+    while (st.length) {
+      const [i, j] = st.pop(); if (j <= i + 1) continue;
+      const dx = rr[j] - rr[i], dy = zz[j] - zz[i], nn = Math.hypot(dx, dy);
+      let best = -1, bd = -1;
+      for (let q = i + 1; q < j; q++) { const px = rr[q] - rr[i], py = zz[q] - zz[i]; const d = nn > 0 ? Math.abs(px * dy - py * dx) / nn : Math.hypot(px, py); if (d > bd) { bd = d; best = q; } }
+      if (bd > TP.EPS) { keep[best] = 1; st.push([i, best], [best, j]); }
+    }
+    const zs = []; for (let i = 0; i < n; i++) if (keep[i]) zs.push(zz[i]);
+    const out = [zs[0]];
+    for (let q = 1; q < zs.length; q++) {
+      const z0 = out[out.length - 1], z1 = zs[q];
+      const inTr = g.trans.some(([ta, tb]) => !(z1 < ta || z0 > tb));
+      const lim = inTr ? TP.SEG_TRANS : TP.SEG_MAX, m = Math.ceil((z1 - z0) / lim);
+      for (let i = 0; i < m; i++) out.push(z0 + (z1 - z0) * (i + 1) / m);
+    }
+    return out;
+  }
+  function buildTopper(opt) {
+    opt = Object.assign({}, TP.DEFAULTS, opt || {});
+    const g = topperGeo(opt.top, opt.h, opt.bulb);
+    const zr = topperRings(g), M = 8 * g.Ns[1];
+    const cosT = new Float64Array(M), sinT = new Float64Array(M);
+    for (let j = 0; j < M; j++) { const th = j * 2 * Math.PI / M; cosT[j] = Math.cos(th); sinT[j] = Math.sin(th); }
+    const V = []; let nv = 0;
+    const ring = (r, z, ribs) => {
+      if (r < 1e-3) { V.push(0, 0, z); return { axis: true, n: nv++ }; }
+      const base = nv;
+      for (let j = 0; j < M; j++) {
+        let rj = r;
+        if (ribs) { const th = j * 2 * Math.PI / M; rj += ribAmp(r) * g.ribField(th, z); }
+        V.push(rj * cosT[j], rj * sinT[j], z);
+      }
+      nv += M; return { axis: false, n: base };
+    };
+    const prof = [ring(g.r_h, 0, false)];
+    for (const z of zr) prof.push(ring(g.R(z), z, true));
+    prof.push(ring(0, g.ceil, false), ring(TP.R_FLAT, g.ceil, false), ring(g.r_h, TP.DEPTH, false));
+    const F = [];
+    for (let e = 0; e < prof.length; e++) {
+      const A = prof[e], B = prof[(e + 1) % prof.length];
+      if (A.axis && B.axis) continue;
+      for (let j = 0; j < M; j++) {
+        const j1 = (j + 1) % M;
+        if (A.axis) F.push(A.n, B.n + j1, B.n + j);
+        else if (B.axis) F.push(A.n + j, A.n + j1, B.n);
+        else { F.push(A.n + j, A.n + j1, B.n + j); F.push(A.n + j1, B.n + j1, B.n + j); }
+      }
+    }
+    const mesh = { positions: Float32Array.from(V), indices: Uint32Array.from(F) };
+    const info = meshInfo(mesh);
+    info.geo = { r_s: g.r_s, r_h: g.r_h, a: g.a, b: g.b, r_neck: g.r_neck, r_b: g.r_b, z_sb: g.z_sb, ceil: g.ceil, Ns: g.Ns, M };
+    return { mesh, info };
+  }
+  function topperMin(top, bulb) {       // najmniejsza wysokość czubka dla danej średnicy czubka choinki i kuli; najmniejsza średnica kuli dla tulei
+    const r_s = top / 2 + TP.CLEAR + TP.WALL_T, phi = Math.atan((1 / TP.BULB_FLAT) / TP.CONE_OUT);
+    const bulbMin = Math.ceil(2 * (r_s + 2) / Math.sin(phi));
+    const g = topperGeo(top, 1000, Math.max(bulb, bulbMin), false);
+    return { bulbMin, hMin: Math.ceil(g.z_sb + 41) };
+  }
+
+  function loadFont(arrayBuffer) { return opentype.parse(arrayBuffer); }
+  return { buildLabel, buildCutter, buildTopper, topperMin, toStl, zipStore, meshInfo, loadFont, LB, CT, TP, PETG };
+});
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var OUTLINES = {"choinka":{"name":"choinka","size":90.0,"ext":[[-31.412,-35.86],[-31.658,-35.843],[-31.807,-35.814],[-32.115,-35.702],[-32.352,-35.557],[-32.47,-35.461],[-32.687,-35.215],[-32.826,-34.974],[-32.883,-34.834],[-32.956,-34.514],[-32.967,-34.362],[-32.946,-34.085],[-32.858,-33.769],[-32.75,-33.547],[-21.963,-14.778],[-21.849,-14.555],[-21.758,-14.322],[-21.69,-14.08],[-21.646,-13.834],[-21.626,-13.584],[-21.632,-13.333],[-21.661,-13.084],[-21.716,-12.839],[-21.794,-12.601],[-21.895,-12.372],[-22.018,-12.153],[-22.162,-11.948],[-22.326,-11.758],[-22.508,-11.586],[-22.705,-11.432],[-22.917,-11.298],[-23.141,-11.185],[-23.376,-11.096],[-23.617,-11.029],[-23.864,-10.987],[-24.405,-10.952],[-24.579,-10.917],[-24.723,-10.871],[-24.973,-10.751],[-25.216,-10.571],[-25.34,-10.445],[-25.502,-10.22],[-25.583,-10.063],[-25.673,-9.8],[-25.704,-9.626],[-25.712,-9.349],[-25.691,-9.174],[-25.617,-8.906],[-25.501,-8.661],[-14.643,10.395],[-14.529,10.62],[-14.438,10.856],[-14.371,11.1],[-14.328,11.349],[-14.31,11.601],[-14.318,11.853],[-14.35,12.104],[-14.407,12.35],[-14.488,12.589],[-14.593,12.819],[-14.72,13.038],[-14.868,13.243],[-15.035,13.432],[-15.221,13.604],[-15.423,13.756],[-15.638,13.887],[-15.866,13.997],[-16.104,14.083],[-16.579,14.206],[-16.742,14.275],[-17.0,14.435],[-17.221,14.644],[-17.314,14.763],[-17.454,15.004],[-17.518,15.169],[-17.58,15.44],[-17.588,15.769],[-17.54,16.043],[-17.484,16.211],[-17.375,16.432],[-1.304,44.266],[-1.183,44.436],[-0.97,44.652],[-0.718,44.821],[-0.461,44.929],[-0.164,44.991],[0.013,45.0],[0.29,44.972],[0.58,44.885],[0.848,44.742],[0.989,44.635],[1.183,44.436],[1.337,44.212],[17.375,16.432],[17.484,16.211],[17.573,15.894],[17.593,15.617],[17.58,15.44],[17.518,15.169],[17.454,15.004],[17.314,14.763],[17.221,14.644],[17.0,14.435],[16.742,14.275],[16.579,14.206],[16.104,14.083],[15.866,13.997],[15.638,13.887],[15.423,13.756],[15.221,13.604],[15.035,13.432],[14.868,13.243],[14.72,13.038],[14.593,12.819],[14.488,12.589],[14.407,12.35],[14.35,12.104],[14.318,11.853],[14.31,11.601],[14.328,11.349],[14.371,11.1],[14.438,10.856],[14.529,10.62],[14.643,10.395],[25.501,-8.661],[25.617,-8.906],[25.695,-9.198],[25.715,-9.475],[25.701,-9.651],[25.673,-9.8],[25.583,-10.063],[25.419,-10.346],[25.235,-10.554],[25.119,-10.652],[24.862,-10.812],[24.579,-10.917],[24.405,-10.952],[23.915,-10.982],[23.664,-11.019],[23.419,-11.082],[23.181,-11.168],[22.953,-11.278],[22.737,-11.41],[22.535,-11.563],[22.349,-11.735],[22.181,-11.925],[22.033,-12.13],[21.906,-12.349],[21.802,-12.58],[21.721,-12.82],[21.664,-13.067],[21.633,-13.318],[21.626,-13.571],[21.645,-13.823],[21.688,-14.073],[21.756,-14.317],[21.848,-14.553],[21.963,-14.778],[32.78,-33.603],[32.907,-33.913],[32.964,-34.236],[32.953,-34.539],[32.891,-34.81],[32.837,-34.951],[32.756,-35.109],[32.593,-35.334],[32.352,-35.557],[32.115,-35.702],[31.976,-35.762],[31.807,-35.814],[31.532,-35.856],[18.164,-35.86],[17.915,-35.872],[17.668,-35.909],[17.426,-35.97],[17.191,-36.054],[16.966,-36.16],[16.752,-36.289],[16.551,-36.437],[16.367,-36.605],[16.199,-36.79],[16.05,-36.99],[15.922,-37.204],[15.815,-37.43],[15.731,-37.665],[15.671,-37.907],[15.634,-38.153],[15.622,-38.403],[15.622,-43.443],[15.602,-43.71],[15.535,-43.976],[15.41,-44.247],[15.313,-44.392],[15.129,-44.595],[14.994,-44.706],[14.759,-44.847],[14.598,-44.913],[14.332,-44.98],[14.065,-45.0],[-14.065,-45.0],[-14.308,-44.983],[-14.455,-44.956],[-14.621,-44.905],[-14.869,-44.788],[-15.014,-44.691],[-15.217,-44.507],[-15.328,-44.372],[-15.468,-44.137],[-15.535,-43.976],[-15.602,-43.71],[-15.622,-43.443],[-15.622,-38.403],[-15.634,-38.153],[-15.671,-37.907],[-15.731,-37.665],[-15.815,-37.43],[-15.922,-37.204],[-16.05,-36.99],[-16.199,-36.79],[-16.367,-36.605],[-16.551,-36.437],[-16.752,-36.289],[-16.966,-36.16],[-17.191,-36.054],[-17.426,-35.97],[-17.668,-35.909],[-17.915,-35.872],[-18.164,-35.86]],"holes":[]},"renifer":{"name":"renifer","size":90.0,"ext":[[-28.326,40.629],[-28.308,41.212],[-28.276,41.549],[-28.22,41.838],[-27.98,42.444],[-27.876,42.626],[-27.595,43.049],[-27.178,43.496],[-26.952,43.684],[-26.553,43.915],[-26.033,44.167],[-25.804,44.248],[-25.577,44.298],[-25.292,44.325],[-24.709,44.307],[-24.372,44.275],[-24.107,44.226],[-23.559,44.014],[-23.404,43.939],[-22.922,43.631],[-22.762,43.503],[-22.425,43.177],[-22.237,42.951],[-21.64,41.924],[-21.241,41.026],[-21.117,40.81],[-20.971,40.608],[-20.806,40.422],[-20.624,40.252],[-20.425,40.102],[-20.213,39.972],[-19.988,39.864],[-19.754,39.779],[-19.513,39.717],[-19.267,39.68],[-19.018,39.667],[-18.77,39.68],[-18.523,39.716],[-18.282,39.778],[-18.048,39.862],[-17.823,39.97],[-17.611,40.1],[-17.412,40.25],[-17.229,40.419],[-17.064,40.605],[-16.918,40.807],[-16.36,41.666],[-16.218,41.914],[-16.045,42.293],[-15.611,43.001],[-15.438,43.379],[-15.129,43.861],[-14.982,44.042],[-14.786,44.223],[-14.441,44.496],[-14.255,44.614],[-13.735,44.866],[-13.392,44.973],[-13.087,45.0],[-12.526,44.981],[-12.379,44.963],[-11.763,44.804],[-11.474,44.68],[-10.942,44.335],[-10.811,44.224],[-10.595,43.986],[-10.357,43.683],[-10.239,43.497],[-9.966,42.923],[-9.872,42.588],[-9.853,42.35],[-9.874,41.743],[-9.932,41.43],[-10.083,40.907],[-10.238,40.607],[-11.096,39.285],[-11.238,39.036],[-11.348,38.786],[-11.48,38.541],[-13.146,35.977],[-13.287,35.728],[-13.397,35.478],[-13.53,35.233],[-15.33,32.462],[-15.454,32.247],[-15.557,32.02],[-15.637,31.785],[-15.694,31.543],[-15.725,31.296],[-15.733,31.048],[-15.715,30.799],[-15.673,30.554],[-15.607,30.315],[-15.517,30.083],[-15.405,29.861],[-15.271,29.651],[-15.117,29.456],[-14.945,29.277],[-14.756,29.115],[-14.551,28.974],[-14.334,28.853],[-14.105,28.755],[-13.868,28.68],[-13.625,28.629],[-13.377,28.602],[-13.129,28.6],[-12.881,28.622],[-12.637,28.669],[-12.399,28.74],[-12.168,28.835],[-11.949,28.951],[-11.742,29.089],[-11.351,29.422],[-10.983,29.704],[-10.862,29.777],[-10.342,30.029],[-10.065,30.123],[-9.715,30.163],[-9.108,30.142],[-8.795,30.085],[-8.236,29.918],[-7.964,29.774],[-7.468,29.433],[-7.202,29.149],[-6.964,28.846],[-6.86,28.685],[-6.573,28.086],[-6.492,27.827],[-6.46,27.513],[-6.479,26.931],[-6.511,26.71],[-6.62,26.287],[-6.705,26.034],[-6.812,25.824],[-7.703,24.448],[-7.845,24.199],[-7.955,23.949],[-8.087,23.704],[-9.752,21.14],[-9.894,20.891],[-10.004,20.641],[-10.137,20.396],[-11.941,17.618],[-12.063,17.409],[-12.164,17.188],[-12.244,16.958],[-12.301,16.722],[-12.334,16.482],[-12.344,16.239],[-12.331,15.997],[-12.294,15.757],[-12.234,15.522],[-12.152,15.293],[-12.048,15.074],[-11.923,14.866],[-11.778,14.671],[-11.616,14.491],[-11.436,14.327],[-11.242,14.182],[-11.034,14.056],[-10.815,13.951],[-10.587,13.867],[-10.352,13.806],[-10.112,13.769],[-9.87,13.754],[-9.627,13.763],[-9.387,13.796],[-9.15,13.852],[-8.921,13.93],[-8.7,14.03],[-8.489,14.152],[-8.292,14.293],[-7.753,14.748],[-7.494,14.926],[-6.895,15.214],[-6.678,15.284],[-6.322,15.326],[-5.715,15.305],[-5.402,15.248],[-4.899,15.104],[-4.624,14.97],[-4.156,14.661],[-3.926,14.447],[-3.571,14.009],[-3.453,13.823],[-3.169,13.224],[-3.094,12.961],[-3.067,12.676],[-3.086,12.094],[-3.118,11.873],[-3.264,11.331],[-3.387,11.042],[-4.31,9.611],[-4.452,9.362],[-4.561,9.112],[-4.694,8.867],[-6.359,6.303],[-6.501,6.054],[-6.611,5.804],[-6.744,5.559],[-9.401,1.468],[-9.543,1.219],[-9.825,0.625],[-9.915,0.392],[-9.981,0.15],[-10.023,-0.096],[-10.04,-0.346],[-10.032,-0.596],[-9.999,-0.845],[-9.942,-1.088],[-9.86,-1.325],[-9.755,-1.552],[-9.628,-1.768],[-9.48,-1.97],[-9.313,-2.156],[-9.128,-2.324],[-8.927,-2.473],[-8.712,-2.602],[-8.485,-2.708],[-8.249,-2.791],[-8.005,-2.85],[-7.757,-2.884],[-7.507,-2.893],[-7.258,-2.878],[-7.01,-2.837],[-5.79,-2.475],[-5.018,-2.276],[-4.222,-2.102],[-3.192,-1.924],[-2.384,-1.818],[-1.59,-1.745],[-0.794,-1.701],[0.004,-1.687],[0.801,-1.702],[1.843,-1.765],[2.654,-1.85],[3.444,-1.962],[4.228,-2.104],[5.248,-2.332],[6.017,-2.54],[7.011,-2.837],[7.258,-2.878],[7.508,-2.893],[7.758,-2.884],[8.006,-2.849],[8.249,-2.791],[8.485,-2.708],[8.712,-2.601],[8.927,-2.473],[9.128,-2.324],[9.313,-2.156],[9.481,-1.969],[9.628,-1.768],[9.755,-1.552],[9.86,-1.325],[9.942,-1.088],[9.999,-0.844],[10.032,-0.596],[10.04,-0.346],[10.023,-0.096],[9.981,0.15],[9.915,0.392],[9.825,0.625],[9.543,1.219],[9.401,1.468],[6.748,5.553],[6.611,5.804],[6.501,6.054],[6.359,6.303],[4.699,8.861],[4.562,9.112],[4.452,9.362],[4.31,9.611],[3.387,11.042],[3.264,11.331],[3.103,11.954],[3.086,12.094],[3.067,12.671],[3.108,13.028],[3.199,13.298],[3.465,13.844],[3.573,14.012],[3.809,14.312],[4.046,14.57],[4.267,14.74],[4.78,15.055],[5.149,15.182],[5.521,15.276],[5.711,15.305],[6.403,15.323],[6.674,15.285],[6.944,15.194],[7.469,14.94],[7.595,14.863],[7.958,14.585],[8.292,14.293],[8.489,14.152],[8.7,14.03],[8.921,13.93],[9.15,13.852],[9.387,13.796],[9.627,13.763],[9.87,13.754],[10.112,13.769],[10.352,13.806],[10.587,13.867],[10.815,13.951],[11.034,14.056],[11.242,14.182],[11.436,14.327],[11.616,14.491],[11.778,14.671],[11.923,14.866],[12.048,15.074],[12.152,15.293],[12.234,15.522],[12.294,15.757],[12.331,15.997],[12.344,16.239],[12.334,16.482],[12.301,16.722],[12.244,16.958],[12.164,17.188],[12.063,17.409],[11.941,17.618],[10.141,20.39],[10.004,20.641],[9.895,20.891],[9.753,21.14],[8.092,23.697],[7.955,23.949],[7.845,24.199],[7.703,24.448],[6.849,25.763],[6.741,25.952],[6.605,26.34],[6.511,26.712],[6.482,26.902],[6.46,27.508],[6.501,27.865],[6.593,28.135],[6.858,28.681],[6.966,28.849],[7.202,29.149],[7.439,29.407],[7.66,29.576],[8.173,29.891],[8.542,30.019],[8.914,30.113],[9.104,30.142],[9.843,30.158],[10.067,30.122],[10.337,30.031],[10.862,29.777],[10.988,29.7],[11.351,29.422],[11.742,29.089],[11.949,28.951],[12.169,28.835],[12.399,28.74],[12.637,28.669],[12.881,28.622],[13.129,28.6],[13.378,28.602],[13.625,28.629],[13.868,28.68],[14.105,28.755],[14.334,28.853],[14.551,28.974],[14.756,29.115],[14.945,29.277],[15.118,29.456],[15.271,29.651],[15.405,29.861],[15.517,30.083],[15.607,30.315],[15.673,30.554],[15.715,30.799],[15.733,31.048],[15.725,31.296],[15.694,31.543],[15.637,31.785],[15.557,32.02],[15.455,32.247],[15.33,32.462],[13.534,35.227],[13.397,35.478],[13.288,35.728],[13.146,35.977],[11.48,38.542],[11.372,38.731],[11.226,39.058],[11.092,39.291],[10.242,40.6],[10.134,40.789],[9.998,41.177],[9.904,41.549],[9.872,41.768],[9.856,42.431],[9.894,42.702],[9.986,42.972],[10.24,43.497],[10.316,43.623],[10.712,44.121],[10.832,44.243],[10.994,44.373],[11.547,44.719],[11.935,44.856],[12.307,44.95],[12.497,44.979],[13.214,44.996],[13.424,44.967],[13.629,44.909],[14.255,44.614],[14.381,44.537],[14.879,44.141],[15.093,43.911],[15.427,43.401],[15.623,42.979],[16.034,42.315],[16.23,41.893],[16.364,41.66],[16.918,40.806],[17.064,40.605],[17.228,40.42],[17.41,40.251],[17.608,40.101],[17.82,39.972],[18.043,39.864],[18.276,39.779],[18.516,39.718],[18.762,39.68],[19.009,39.667],[19.257,39.679],[19.502,39.715],[19.743,39.775],[19.977,39.859],[20.201,39.965],[20.413,40.093],[20.612,40.242],[20.795,40.409],[20.96,40.594],[21.107,40.794],[21.233,41.008],[21.647,41.939],[22.173,42.847],[22.341,43.087],[22.791,43.53],[23.17,43.794],[23.533,44.003],[24.083,44.219],[24.25,44.258],[24.685,44.304],[25.287,44.325],[25.529,44.306],[25.699,44.274],[25.907,44.217],[26.048,44.16],[26.574,43.903],[26.952,43.684],[27.089,43.58],[27.485,43.18],[27.595,43.049],[27.872,42.633],[27.989,42.425],[28.22,41.838],[28.276,41.549],[28.308,41.212],[28.326,40.634],[28.308,40.392],[28.262,40.165],[28.161,39.873],[27.656,38.875],[27.551,38.578],[27.393,38.205],[27.242,37.687],[26.866,36.879],[26.769,36.59],[26.611,36.217],[26.467,35.719],[26.302,35.325],[26.158,34.827],[25.993,34.434],[25.849,33.936],[25.683,33.542],[25.539,33.044],[25.374,32.65],[25.23,32.152],[25.023,31.631],[24.782,30.563],[24.543,29.938],[24.393,29.338],[24.185,28.817],[23.592,26.078],[23.541,25.907],[23.34,25.406],[22.771,22.781],[22.721,22.611],[22.52,22.11],[22.466,21.9],[21.927,19.371],[21.876,19.2],[21.675,18.699],[21.621,18.489],[21.562,18.14],[21.551,17.694],[21.515,17.427],[21.445,17.159],[21.31,16.843],[21.183,16.428],[19.901,10.397],[19.859,10.124],[19.849,9.455],[19.873,9.215],[19.92,8.979],[19.99,8.749],[20.081,8.526],[20.194,8.313],[20.326,8.112],[20.477,7.924],[20.646,7.752],[20.83,7.597],[21.028,7.46],[21.239,7.343],[21.459,7.247],[21.688,7.173],[22.081,7.087],[22.221,7.043],[22.505,6.9],[22.718,6.735],[22.912,6.514],[23.004,6.369],[23.12,6.108],[23.182,5.906],[23.28,5.47],[23.363,4.997],[23.468,4.63],[23.621,3.733],[23.73,2.628],[23.847,1.964],[24.0,0.401],[24.014,-0.308],[24.123,-1.465],[24.101,-2.163],[24.117,-2.521],[24.093,-3.164],[24.106,-3.645],[24.084,-3.985],[24.021,-4.479],[23.996,-4.642],[23.942,-4.835],[23.645,-5.613],[23.556,-5.809],[23.159,-6.444],[22.561,-7.3],[22.033,-7.948],[21.72,-8.245],[21.321,-8.679],[20.709,-9.241],[20.3,-9.678],[19.813,-10.037],[19.623,-10.199],[19.45,-10.379],[19.296,-10.576],[19.162,-10.787],[19.05,-11.011],[18.961,-11.244],[18.895,-11.485],[18.854,-11.732],[18.838,-11.981],[18.847,-12.231],[18.88,-12.479],[18.939,-12.722],[19.021,-12.958],[19.579,-14.087],[20.009,-15.059],[20.392,-16.051],[20.725,-17.06],[20.942,-17.827],[21.131,-18.602],[21.291,-19.383],[21.458,-20.414],[21.553,-21.224],[21.631,-22.284],[21.657,-23.329],[21.642,-24.144],[21.576,-25.205],[21.462,-26.243],[21.337,-27.049],[21.13,-28.092],[20.799,-29.379],[20.396,-30.625],[20.007,-31.634],[19.461,-32.846],[18.841,-34.021],[18.161,-35.141],[17.55,-36.033],[16.739,-37.085],[15.864,-38.085],[14.944,-39.018],[14.143,-39.744],[13.111,-40.581],[12.029,-41.352],[10.918,-42.047],[9.971,-42.568],[8.773,-43.143],[7.791,-43.55],[6.79,-43.908],[5.773,-44.216],[4.742,-44.475],[3.699,-44.682],[2.648,-44.838],[1.59,-44.942],[0.528,-44.994],[-0.535,-44.993],[-1.597,-44.941],[-2.654,-44.837],[-3.706,-44.681],[-4.748,-44.473],[-5.779,-44.215],[-6.797,-43.906],[-7.797,-43.548],[-8.779,-43.141],[-9.74,-42.686],[-10.677,-42.185],[-11.589,-41.638],[-12.473,-41.047],[-13.327,-40.414],[-14.148,-39.74],[-14.936,-39.026],[-15.687,-38.274],[-16.401,-37.486],[-17.075,-36.664],[-17.708,-35.811],[-18.298,-34.927],[-18.845,-34.015],[-19.346,-33.077],[-19.8,-32.116],[-20.301,-30.886],[-20.72,-29.644],[-21.008,-28.602],[-21.291,-27.304],[-21.492,-26.009],[-21.598,-24.933],[-21.655,-23.606],[-21.631,-22.296],[-21.552,-21.217],[-21.422,-20.162],[-21.19,-18.873],[-20.94,-17.821],[-20.562,-16.547],[-20.114,-15.316],[-19.696,-14.339],[-19.126,-13.184],[-19.021,-12.959],[-18.939,-12.724],[-18.881,-12.483],[-18.847,-12.237],[-18.838,-11.988],[-18.853,-11.74],[-18.893,-11.495],[-18.957,-11.255],[-19.045,-11.023],[-19.155,-10.8],[-19.287,-10.589],[-19.439,-10.393],[-19.609,-10.212],[-19.797,-10.049],[-20.3,-9.678],[-20.709,-9.241],[-21.335,-8.666],[-21.72,-8.245],[-22.034,-7.947],[-22.561,-7.3],[-23.176,-6.418],[-23.517,-5.876],[-23.595,-5.73],[-23.94,-4.842],[-24.015,-4.542],[-24.084,-3.985],[-24.106,-3.642],[-24.093,-3.166],[-24.117,-2.52],[-24.104,-2.073],[-24.125,-1.519],[-24.014,-0.307],[-24.0,0.401],[-23.847,1.964],[-23.73,2.627],[-23.605,3.858],[-23.458,4.668],[-23.351,5.045],[-23.281,5.466],[-23.182,5.906],[-23.113,6.127],[-23.004,6.369],[-22.912,6.514],[-22.736,6.718],[-22.606,6.83],[-22.378,6.973],[-22.244,7.034],[-22.081,7.087],[-21.69,7.172],[-21.462,7.246],[-21.242,7.342],[-21.033,7.458],[-20.835,7.593],[-20.652,7.747],[-20.484,7.917],[-20.332,8.103],[-20.2,8.302],[-20.087,8.513],[-19.995,8.734],[-19.924,8.963],[-19.876,9.198],[-19.85,9.436],[-19.849,9.973],[-19.866,10.189],[-21.184,16.434],[-21.256,16.701],[-21.427,17.113],[-21.516,17.431],[-21.55,17.666],[-21.57,18.205],[-21.621,18.488],[-21.695,18.759],[-21.875,19.197],[-21.927,19.371],[-22.465,21.899],[-22.539,22.17],[-22.719,22.608],[-22.772,22.782],[-23.287,25.202],[-23.36,25.469],[-23.53,25.881],[-23.59,26.072],[-24.132,28.613],[-24.204,28.88],[-24.375,29.292],[-24.562,30.0],[-24.776,30.543],[-24.969,31.427],[-25.042,31.694],[-25.212,32.106],[-25.361,32.617],[-25.522,32.997],[-25.671,33.508],[-25.831,33.889],[-25.98,34.4],[-26.14,34.781],[-26.289,35.292],[-26.449,35.672],[-26.598,36.181],[-26.768,36.587],[-26.867,36.881],[-27.231,37.661],[-27.38,38.169],[-27.657,38.876],[-27.916,39.369],[-28.2,39.968],[-28.26,40.159],[-28.308,40.391]],"holes":[]},"balwan":{"name":"bałwan","size":95.0,"ext":[[-14.623,-10.484],[-13.565,-9.541],[-13.401,-9.355],[-13.255,-9.154],[-13.13,-8.94],[-13.027,-8.715],[-12.947,-8.48],[-12.891,-8.238],[-12.858,-7.993],[-12.851,-7.745],[-12.868,-7.497],[-12.909,-7.253],[-12.974,-7.014],[-13.063,-6.782],[-13.174,-6.56],[-13.669,-5.812],[-14.073,-5.152],[-14.343,-4.666],[-14.702,-3.953],[-15.016,-3.246],[-15.221,-2.728],[-15.476,-1.998],[-15.637,-1.465],[-15.837,-0.692],[-15.995,0.065],[-16.086,0.614],[-16.183,1.406],[-16.242,2.202],[-16.261,2.976],[-16.252,3.532],[-16.206,4.329],[-16.154,4.859],[-16.047,5.625],[-15.835,6.693],[-15.706,7.209],[-15.488,7.951],[-15.121,8.976],[-14.82,9.689],[-14.582,10.192],[-14.339,10.665],[-13.958,11.338],[-13.368,12.254],[-12.913,12.879],[-12.408,13.526],[-12.281,13.737],[-12.175,13.96],[-12.091,14.192],[-12.031,14.432],[-11.994,14.676],[-11.982,14.922],[-11.978,15.703],[-11.938,15.969],[-11.897,16.11],[-11.831,16.269],[-11.693,16.5],[-11.3,16.934],[-11.152,17.135],[-11.024,17.351],[-10.918,17.578],[-10.836,17.815],[-10.778,18.058],[-10.745,18.306],[-10.736,18.557],[-10.753,18.807],[-10.794,19.054],[-10.86,19.295],[-11.216,20.176],[-11.467,20.918],[-11.67,21.676],[-11.819,22.421],[-11.904,23.027],[-11.957,23.613],[-11.98,24.201],[-11.968,24.96],[-11.924,25.571],[-11.851,26.155],[-11.716,26.902],[-11.572,27.498],[-11.352,28.225],[-11.142,28.8],[-10.84,29.497],[-10.421,30.334],[-10.337,30.565],[-10.275,30.803],[-10.238,31.047],[-10.224,31.293],[-10.235,31.538],[-10.27,31.782],[-10.329,32.021],[-10.411,32.253],[-10.515,32.476],[-10.641,32.688],[-10.787,32.886],[-10.952,33.069],[-11.134,33.235],[-11.331,33.382],[-11.542,33.509],[-11.764,33.615],[-11.996,33.698],[-12.235,33.758],[-12.478,33.794],[-13.135,33.811],[-13.281,33.826],[-13.543,33.892],[-13.83,34.028],[-14.047,34.188],[-14.168,34.309],[-14.26,34.424],[-14.399,34.655],[-14.464,34.813],[-14.53,35.074],[-14.55,35.337],[-14.545,35.815],[-14.506,36.082],[-14.456,36.246],[-14.328,36.51],[-14.168,36.727],[-14.065,36.832],[-13.83,37.008],[-13.566,37.136],[-13.281,37.21],[-13.08,37.228],[-11.059,37.23],[-10.814,37.242],[-10.571,37.278],[-10.333,37.337],[-10.102,37.42],[-9.88,37.525],[-9.67,37.651],[-9.473,37.797],[-9.291,37.962],[-9.126,38.144],[-8.98,38.341],[-8.854,38.551],[-8.749,38.773],[-8.666,39.004],[-8.607,39.242],[-8.571,39.485],[-8.559,39.73],[-8.559,45.969],[-8.542,46.208],[-8.465,46.516],[-8.35,46.76],[-8.269,46.883],[-8.056,47.118],[-7.941,47.211],[-7.71,47.349],[-7.411,47.456],[-7.266,47.484],[-7.028,47.5],[7.028,47.5],[7.29,47.48],[7.575,47.406],[7.71,47.349],[7.941,47.211],[8.177,46.997],[8.337,46.781],[8.408,46.652],[8.473,46.493],[8.539,46.232],[8.559,45.969],[8.559,39.73],[8.571,39.485],[8.607,39.242],[8.666,39.004],[8.749,38.773],[8.854,38.551],[8.98,38.341],[9.126,38.144],[9.291,37.962],[9.473,37.797],[9.67,37.651],[9.88,37.525],[10.102,37.42],[10.333,37.337],[10.571,37.278],[10.814,37.242],[11.059,37.23],[13.135,37.226],[13.402,37.186],[13.679,37.089],[13.952,36.926],[14.065,36.832],[14.246,36.632],[14.409,36.359],[14.5,36.106],[14.53,35.962],[14.548,35.76],[14.548,35.276],[14.5,34.93],[14.409,34.677],[14.328,34.526],[14.168,34.309],[14.047,34.188],[13.809,34.015],[13.566,33.9],[13.425,33.856],[13.135,33.811],[12.478,33.794],[12.235,33.758],[11.996,33.698],[11.764,33.614],[11.542,33.509],[11.331,33.382],[11.133,33.234],[10.951,33.069],[10.786,32.885],[10.64,32.687],[10.514,32.475],[10.41,32.252],[10.328,32.02],[10.27,31.781],[10.235,31.537],[10.224,31.291],[10.238,31.045],[10.276,30.801],[10.337,30.563],[10.422,30.332],[10.916,29.332],[11.136,28.814],[11.425,28.055],[11.54,27.837],[11.676,27.63],[11.832,27.438],[12.006,27.263],[12.197,27.105],[12.402,26.967],[12.62,26.85],[12.849,26.755],[13.086,26.684],[16.402,25.855],[16.652,25.772],[16.889,25.645],[17.008,25.558],[17.233,25.333],[17.32,25.214],[17.447,24.977],[17.539,24.672],[17.566,24.404],[17.557,24.233],[17.505,23.969],[17.447,23.807],[17.32,23.569],[17.135,23.341],[17.008,23.226],[16.784,23.076],[16.629,23.003],[16.402,22.929],[13.086,22.1],[12.849,22.028],[12.62,21.933],[12.402,21.816],[12.197,21.678],[12.006,21.521],[11.832,21.345],[11.676,21.153],[11.539,20.946],[11.424,20.727],[11.142,19.984],[10.95,19.527],[10.86,19.294],[10.794,19.052],[10.753,18.805],[10.736,18.555],[10.745,18.305],[10.778,18.057],[10.836,17.814],[10.919,17.577],[11.024,17.35],[11.152,17.135],[11.3,16.934],[11.693,16.5],[11.831,16.269],[11.897,16.11],[11.938,15.969],[11.978,15.703],[11.994,14.677],[12.03,14.433],[12.09,14.195],[12.173,13.963],[12.279,13.741],[12.406,13.53],[13.221,12.463],[13.656,11.824],[13.95,11.351],[14.332,10.678],[14.586,10.183],[14.912,9.481],[15.125,8.967],[15.312,8.469],[15.555,7.735],[15.837,6.683],[15.95,6.163],[16.082,5.401],[16.207,4.32],[16.252,3.547],[16.261,2.991],[16.243,2.217],[16.206,1.662],[16.125,0.893],[16.043,0.342],[15.899,-0.418],[15.773,-0.96],[15.56,-1.729],[15.317,-2.464],[15.121,-2.985],[14.81,-3.72],[14.474,-4.417],[14.211,-4.908],[13.806,-5.596],[13.173,-6.562],[13.062,-6.784],[12.973,-7.015],[12.908,-7.255],[12.867,-7.499],[12.851,-7.746],[12.859,-7.994],[12.891,-8.24],[12.948,-8.481],[13.028,-8.716],[13.131,-8.942],[13.256,-9.156],[13.402,-9.356],[13.566,-9.542],[14.612,-10.474],[15.378,-11.227],[16.09,-12.0],[16.543,-12.534],[16.963,-13.063],[17.395,-13.645],[17.985,-14.513],[18.532,-15.41],[19.023,-16.31],[19.491,-17.278],[19.901,-18.245],[20.262,-19.231],[20.575,-20.233],[20.838,-21.25],[21.052,-22.278],[21.214,-23.316],[21.294,-24.011],[21.349,-24.684],[21.394,-25.758],[21.393,-26.458],[21.37,-27.158],[21.324,-27.857],[21.258,-28.529],[21.11,-29.594],[20.984,-30.282],[20.842,-30.943],[20.573,-31.983],[20.369,-32.653],[20.152,-33.293],[19.766,-34.296],[19.487,-34.938],[19.199,-35.549],[18.7,-36.501],[18.35,-37.108],[17.98,-37.702],[17.591,-38.284],[17.197,-38.833],[16.537,-39.681],[16.084,-40.215],[15.613,-40.733],[15.126,-41.236],[14.641,-41.706],[13.839,-42.422],[13.022,-43.081],[12.173,-43.7],[11.295,-44.276],[10.389,-44.808],[9.459,-45.296],[8.506,-45.737],[7.532,-46.13],[6.541,-46.476],[5.533,-46.772],[4.512,-47.019],[3.481,-47.215],[2.441,-47.36],[1.395,-47.454],[0.345,-47.497],[-0.705,-47.488],[-1.753,-47.428],[-2.797,-47.316],[-3.835,-47.154],[-4.863,-46.94],[-5.88,-46.676],[-6.882,-46.363],[-7.868,-46.001],[-8.835,-45.591],[-9.78,-45.134],[-10.702,-44.631],[-11.598,-44.084],[-12.467,-43.493],[-13.305,-42.86],[-14.111,-42.187],[-14.883,-41.475],[-15.62,-40.727],[-16.318,-39.943],[-16.978,-39.125],[-17.596,-38.276],[-18.172,-37.398],[-18.705,-36.493],[-19.192,-35.563],[-19.633,-34.61],[-20.027,-33.636],[-20.372,-32.644],[-20.668,-31.637],[-20.915,-30.616],[-21.111,-29.584],[-21.257,-28.544],[-21.351,-27.498],[-21.394,-26.449],[-21.385,-25.399],[-21.324,-24.351],[-21.213,-23.306],[-21.05,-22.269],[-20.836,-21.241],[-20.573,-20.224],[-20.259,-19.222],[-19.897,-18.236],[-19.487,-17.269],[-19.03,-16.323],[-18.527,-15.401],[-17.98,-14.505],[-17.389,-13.637],[-16.757,-12.799],[-16.084,-11.993],[-15.372,-11.22]],"holes":[]},"ludzik":{"name":"piernikowy ludzik","size":90.0,"ext":[[-12.596,6.677],[-12.313,7.28],[-12.236,7.504],[-12.18,7.735],[-12.146,7.969],[-12.135,9.072],[-12.147,9.322],[-12.185,9.568],[-12.246,9.81],[-12.332,10.044],[-12.44,10.269],[-12.57,10.482],[-12.721,10.681],[-12.891,10.863],[-13.078,11.028],[-13.28,11.174],[-13.496,11.298],[-13.724,11.401],[-33.512,19.146],[-33.904,19.33],[-34.334,19.578],[-34.764,19.88],[-35.08,20.146],[-35.466,20.532],[-35.813,20.953],[-36.117,21.407],[-36.374,21.888],[-36.583,22.392],[-36.742,22.914],[-36.849,23.449],[-36.903,23.992],[-36.903,24.538],[-36.85,25.081],[-36.744,25.617],[-36.586,26.139],[-36.378,26.644],[-36.121,27.125],[-35.818,27.579],[-35.472,28.001],[-35.219,28.263],[-34.95,28.508],[-34.688,28.717],[-34.39,28.926],[-34.079,29.115],[-33.756,29.283],[-33.423,29.43],[-33.101,29.548],[-32.507,29.709],[-32.169,29.77],[-31.787,29.814],[-31.444,29.83],[-31.08,29.825],[-30.717,29.795],[-30.357,29.742],[-29.826,29.619],[-29.318,29.447],[-14.386,23.604],[-14.159,23.528],[-13.925,23.474],[-13.688,23.442],[-13.448,23.433],[-13.209,23.447],[-12.972,23.484],[-12.74,23.543],[-12.514,23.625],[-12.297,23.727],[-12.092,23.85],[-11.899,23.992],[-11.72,24.152],[-11.557,24.328],[-11.413,24.519],[-11.287,24.723],[-10.877,25.604],[-10.526,26.262],[-10.109,26.937],[-9.713,27.519],[-9.601,27.733],[-9.509,27.956],[-9.44,28.188],[-9.393,28.425],[-9.369,28.666],[-9.369,28.907],[-9.392,29.148],[-9.438,29.385],[-9.507,29.617],[-9.868,30.462],[-10.056,30.974],[-10.257,31.639],[-10.415,32.316],[-10.504,32.829],[-10.581,33.495],[-10.612,34.04],[-10.616,34.561],[-10.582,35.255],[-10.502,35.945],[-10.378,36.629],[-10.215,37.279],[-10.053,37.8],[-9.808,38.45],[-9.521,39.083],[-9.193,39.695],[-8.826,40.285],[-8.421,40.85],[-7.98,41.387],[-7.504,41.894],[-6.997,42.368],[-6.46,42.809],[-5.895,43.213],[-5.305,43.58],[-4.692,43.907],[-4.059,44.194],[-3.408,44.438],[-2.743,44.639],[-2.067,44.797],[-1.381,44.91],[-0.689,44.978],[0.154,44.999],[0.699,44.977],[1.391,44.909],[2.076,44.795],[2.753,44.637],[3.418,44.435],[4.068,44.19],[4.701,43.903],[5.313,43.575],[5.903,43.208],[6.468,42.803],[7.005,42.362],[7.512,41.887],[7.986,41.379],[8.427,40.842],[8.831,40.277],[9.198,39.687],[9.525,39.074],[9.812,38.441],[10.056,37.79],[10.251,37.149],[10.38,36.619],[10.504,35.935],[10.583,35.245],[10.617,34.551],[10.612,34.03],[10.569,33.361],[10.502,32.819],[10.413,32.306],[10.255,31.629],[10.061,30.988],[9.817,30.337],[9.51,29.625],[9.44,29.393],[9.393,29.155],[9.369,28.913],[9.369,28.671],[9.392,28.429],[9.439,28.191],[9.508,27.959],[9.6,27.734],[9.713,27.52],[10.109,26.937],[10.526,26.262],[10.877,25.604],[11.287,24.723],[11.413,24.519],[11.557,24.328],[11.72,24.152],[11.899,23.992],[12.092,23.85],[12.297,23.727],[12.514,23.625],[12.74,23.543],[12.972,23.484],[13.209,23.447],[13.448,23.433],[13.688,23.442],[13.925,23.474],[14.159,23.528],[14.386,23.605],[29.327,29.451],[29.651,29.566],[29.982,29.66],[30.565,29.776],[30.947,29.817],[31.423,29.831],[31.807,29.812],[32.197,29.766],[32.575,29.694],[33.034,29.569],[33.396,29.44],[33.756,29.283],[34.097,29.105],[34.5,28.852],[34.809,28.623],[35.087,28.388],[35.368,28.114],[35.624,27.827],[35.912,27.448],[36.121,27.125],[36.378,26.644],[36.579,26.158],[36.711,25.745],[36.829,25.213],[36.894,24.691],[36.909,24.146],[36.873,23.63],[36.788,23.111],[36.648,22.584],[36.501,22.176],[36.28,21.699],[36.02,21.252],[35.702,20.809],[35.356,20.414],[35.044,20.113],[34.635,19.783],[34.334,19.578],[34.021,19.393],[33.697,19.228],[33.371,19.089],[13.724,11.401],[13.496,11.298],[13.28,11.174],[13.078,11.028],[12.891,10.863],[12.721,10.681],[12.57,10.482],[12.44,10.269],[12.332,10.044],[12.246,9.81],[12.185,9.568],[12.147,9.322],[12.135,9.072],[12.135,8.206],[12.146,7.973],[12.178,7.742],[12.232,7.515],[12.307,7.294],[12.596,6.677],[12.803,6.14],[12.932,5.708],[13.031,5.27],[21.116,-37.178],[21.19,-37.657],[21.227,-38.086],[21.231,-38.661],[21.2,-39.111],[21.137,-39.565],[21.048,-39.986],[20.926,-40.42],[20.783,-40.825],[20.55,-41.351],[20.335,-41.748],[20.078,-42.152],[19.732,-42.611],[19.447,-42.934],[19.127,-43.251],[18.802,-43.533],[18.436,-43.809],[18.059,-44.055],[17.491,-44.361],[17.116,-44.525],[16.758,-44.657],[16.117,-44.837],[15.502,-44.946],[14.839,-44.998],[14.194,-44.983],[13.526,-44.901],[12.897,-44.758],[12.285,-44.555],[11.677,-44.283],[11.118,-43.962],[10.803,-43.747],[10.479,-43.496],[9.988,-43.047],[9.54,-42.545],[9.161,-42.022],[8.825,-41.448],[8.584,-40.925],[8.433,-40.522],[8.304,-40.091],[8.205,-39.653],[2.964,-12.136],[2.904,-11.89],[2.82,-11.652],[2.712,-11.423],[2.581,-11.207],[2.43,-11.004],[2.259,-10.819],[2.069,-10.651],[1.864,-10.503],[1.645,-10.377],[1.415,-10.274],[1.175,-10.194],[0.928,-10.139],[0.677,-10.109],[-0.66,-10.108],[-0.912,-10.136],[-1.161,-10.19],[-1.402,-10.269],[-1.635,-10.372],[-1.855,-10.498],[-2.062,-10.645],[-2.253,-10.813],[-2.426,-10.999],[-2.578,-11.202],[-2.71,-11.42],[-2.819,-11.649],[-2.904,-11.889],[-2.964,-12.136],[-8.243,-39.834],[-8.411,-40.456],[-8.584,-40.925],[-8.848,-41.491],[-9.176,-42.046],[-9.425,-42.398],[-9.696,-42.732],[-9.988,-43.047],[-10.279,-43.324],[-10.608,-43.6],[-10.955,-43.854],[-11.318,-44.085],[-11.677,-44.283],[-12.085,-44.474],[-12.467,-44.622],[-13.152,-44.824],[-13.554,-44.906],[-13.98,-44.965],[-14.409,-44.995],[-14.839,-44.998],[-15.268,-44.972],[-15.667,-44.923],[-16.089,-44.843],[-16.506,-44.736],[-16.915,-44.602],[-17.314,-44.442],[-17.701,-44.256],[-18.059,-44.055],[-18.436,-43.809],[-18.764,-43.564],[-19.297,-43.088],[-19.579,-42.79],[-19.854,-42.46],[-20.106,-42.111],[-20.321,-41.772],[-20.613,-41.22],[-20.808,-40.76],[-21.002,-40.166],[-21.133,-39.585],[-21.202,-39.09],[-21.235,-38.495],[-21.212,-37.871],[-21.154,-37.395],[-13.034,5.255],[-12.932,5.708],[-12.803,6.14]],"holes":[]},"gwiazdka":{"name":"gwiazdka","size":80.0,"ext":[[-22.118,-12.519],[-22.088,-12.269],[-22.082,-12.017],[-22.1,-11.766],[-22.142,-11.518],[-22.208,-11.275],[-22.298,-11.039],[-22.409,-10.814],[-22.542,-10.6],[-22.695,-10.4],[-22.867,-10.216],[-41.531,7.979],[-41.666,8.137],[-41.811,8.371],[-41.882,8.532],[-41.954,8.799],[-41.976,8.973],[-41.969,9.249],[-41.939,9.423],[-41.854,9.685],[-41.776,9.843],[-41.619,10.07],[-41.386,10.298],[-41.155,10.449],[-41.018,10.514],[-40.675,10.613],[-14.881,14.363],[-14.634,14.411],[-14.392,14.483],[-14.159,14.578],[-13.936,14.695],[-13.726,14.833],[-13.529,14.99],[-13.349,15.166],[-13.187,15.359],[-13.044,15.566],[-12.922,15.786],[-1.385,39.159],[-1.2,39.436],[-0.987,39.648],[-0.736,39.815],[-0.458,39.931],[-0.287,39.973],[0.013,40.0],[0.287,39.973],[0.577,39.889],[0.736,39.815],[0.987,39.648],[1.184,39.455],[1.357,39.209],[12.922,15.786],[13.044,15.566],[13.187,15.359],[13.349,15.166],[13.529,14.99],[13.726,14.833],[13.936,14.695],[14.159,14.578],[14.392,14.483],[14.634,14.411],[14.881,14.363],[40.675,10.613],[41.018,10.514],[41.263,10.386],[41.405,10.282],[41.603,10.09],[41.71,9.95],[41.844,9.708],[41.899,9.568],[41.945,9.398],[41.978,9.124],[41.974,8.948],[41.927,8.676],[41.873,8.509],[41.75,8.261],[41.531,7.979],[22.867,-10.216],[22.695,-10.4],[22.542,-10.6],[22.409,-10.814],[22.298,-11.039],[22.208,-11.275],[22.142,-11.518],[22.1,-11.766],[22.082,-12.017],[22.088,-12.269],[22.118,-12.519],[26.53,-38.265],[26.537,-38.541],[26.489,-38.839],[26.434,-39.006],[26.299,-39.275],[26.114,-39.513],[25.907,-39.696],[25.649,-39.851],[25.486,-39.917],[25.193,-39.987],[24.892,-39.999],[24.594,-39.953],[24.283,-39.837],[1.211,-27.709],[0.983,-27.603],[0.745,-27.519],[0.501,-27.459],[0.251,-27.422],[-0.0,-27.41],[-0.251,-27.422],[-0.501,-27.459],[-0.745,-27.519],[-0.983,-27.603],[-1.211,-27.709],[-24.283,-39.837],[-24.619,-39.959],[-24.892,-39.999],[-25.043,-40.0],[-25.366,-39.953],[-25.626,-39.861],[-25.76,-39.792],[-25.907,-39.696],[-26.114,-39.513],[-26.299,-39.275],[-26.384,-39.121],[-26.482,-38.863],[-26.52,-38.691],[-26.54,-38.416],[-26.523,-38.209]],"holes":[]},"_params":{"WALL":1.2,"EDGE":0.45,"TAPER":2.0,"H_TOT":16.0,"FL_T":2.0,"FL_W":5.0,"STEPS":8}};
+  var FONT_B64 = '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AmcAKgJPABgCwQA7AtoACQQcABkCywAYAp8ABwJUADIB/gB4AyIAtwH+AFoCxQAeAwwAVQEjAAoCpwAcAqcAPgJdABwCpwAcAmgAHAFoABECpwAcAqIAPgEnAC4BJv/hAmoAPgEnAD4EIwA+AqIAPgJ9ABwCpwA+AqcAHAGsAD4CLgAgAZYAFQKiADkCcgAJA2IABAJMAAUCeP//AfAAHwHzAFsBIwA8AfMARwJ8ABwA1AAAAYgAXwJ3ACoClwAkAkEAPAKfAAcBfQBpAksAHgFvAAoDCwAmAdUAGQItAC0CzQAvAkQANAICACcBpAAKAc8AGQJ1ADwBfwAiAXYADwEFAAoCwQBLAsQAHAErADIBOQAKAPkAFAHKABkCLQAyAxIAKAM1ACgDewAyAhoAIgLhABAC4QAQAuEAEALhABAC4QAQAuEAEAO7AAYC+gAhAh0APgIdAD4CHQA+Ah0APgEnABcBJwAXASf/+QEn/+YC3AAEAvAAPgMSACEDEgAhAxIAIQMSACEDEgAhAn0ARQMSABYCwQA7AsEAOwLBADsCwQA7Ap8ABwJwAD4C+AAxAqcAHAKnABwCpwAcAqcAHAKnABwCpwAcBC0AHAJdABwCaAAcAmgAHAJoABwCaAAcAUEAJAFBACQBQQAGAUH/8wKAABwCogA+An0AHAJ9ABwCfQAcAn0AHAJ9ABwCYwA1AnUADQKiADkCogA5AqIAOQKiADkCeP//AqcAPgJ4//8C4QAQAqcAHALhABACpwAcAuEAEAKnABwC+gAhAl0AHAL6ACECXQAcAvoAIQJdABwC1wA+A0IAHALcAAQCtAAcAh0APgJoABwCHQA+AmgAHAIdAD4CaAAcAh0APgJoABwCHQA+AmgAHAL6ACECpwAcAvoAIQKnABwC/AAhAqcAHAEn/8wBQf/ZASf/zAFB/9kBJ//qAUH/9wEn//oBJ//6AScAPgFBAEsC0AA+AmoAPgHdAD4BJwAXAd8APgEnAD4CCwA+AdoAPgHdAD4BfQA+AeUACgFBAAoC8AA+AqIAPgMKAD4CogA+AvAAPgKiAD4DEgAhAn0AHAMSACECfQAcAxIAIQJ9ABwEJwAhBBEAHAKMAD4BrAA+ApwAPgGsAD4CjAA+AawAPgJnACoCLgAgAmcAKgIuACACZwAqAi4AIAJPABgBlgAVAk8AGAGYABUCwQA7AqIAOQLBADsCogA5AsEAOwKiADkCwQA7AqIAOQLBADsCogA5AsEAOwKiADkEHAAZA2IABAKfAAcCeP//Ap8ABwJUADIB8AAfAlQAMgHwAB8CVAAyAfAAHwFKAAoBSgAKAWgACgCnAAoBBgAJAZoABQG7AAoCHwA0AAEAAAQa/qIAZAmd/c75GAmtAAEAAAAAAAAAAAAAAAAAAAEzAAQDaQK8AAUAAAKKAlgAAABLAooCWAAAAV4AMgFOAAAAAAgAAAAAAAAAAAAABwAAAAAAAAAAAAAAAElURk8AoAAgAX4EGv6iAGQEbwJzAAAAkwAAAAACLgLBAAAAIAAEAAAAAgAAAAMAAAAUAAMAAQAAABQABABoAAAAFgAQAAMABgB+AQcBGwEjATEBNwFIAVsBZQF+//8AAAAgAKABCgEeASgBNgE5AUwBXgFo////4f/A/77/vP+4/7T/s/+w/67/rAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA0AogADAAEECQAAAKIAAAADAAEECQABAA4AogADAAEECQACAAgAsAADAAEECQADADYAuAADAAEECQAEABgA7gADAAEECQAFAAoBBgADAAEECQAGABgBEAADAAEECQAIACYBKAADAAEECQAJAFwBTgADAAEECQALADoBqgADAAEECQANASIB5AADAAEECQAOADYDBgADAAEECQATAK4DPABDAG8AcAB5AHIAaQBnAGgAdAAgADIAMAAyADAAIABUAGgAZQAgAFAAbwBwAHAAaQBuAHMAIABQAHIAbwBqAGUAYwB0ACAAQQB1AHQAaABvAHIAcwAgACgAaAB0AHQAcABzADoALwAvAGcAaQB0AGgAdQBiAC4AYwBvAG0ALwBpAHQAZgBvAHUAbgBkAHIAeQAvAFAAbwBwAHAAaQBuAHMAKQBQAG8AcABwAGkAbgBzAEIAbwBsAGQASQBUAEYATwA7ACAAUABvAHAAcABpAG4AcwAgAEIAbwBsAGQAOwAgADQALgAwADAANABiADgAUABvAHAAcABpAG4AcwAgAEIAbwBsAGQANAAuADAAMAA0AFAAbwBwAHAAaQBuAHMALQBCAG8AbABkAEkAbgBkAGkAYQBuACAAVAB5AHAAZQAgAEYAbwB1AG4AZAByAHkATgBpAG4AYQBkACAASwBhAGwAZQAgACgARABlAHYAYQBuAGEAZwBhAHIAaQApACwAIABKAG8AbgBuAHkAIABQAGkAbgBoAG8AcgBuACAAKABMAGEAdABpAG4AKQBoAHQAdABwAHMAOgAvAC8AaQBuAGQAaQBhAG4AdAB5AHAAZQBmAG8AdQBuAGQAcgB5AC4AYwBvAG0AVABoAGkAcwAgAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIABpAHMAIABsAGkAYwBlAG4AcwBlAGQAIAB1AG4AZABlAHIAIAB0AGgAZQAgAFMASQBMACAATwBwAGUAbgAgAEYAbwBuAHQAIABMAGkAYwBlAG4AcwBlACwAIABWAGUAcgBzAGkAbwBuACAAMQAuADEALgAgAFQAaABpAHMAIABsAGkAYwBlAG4AcwBlACAAaQBzACAAYQB2AGEAaQBsAGEAYgBsAGUAIAB3AGkAdABoACAAYQAgAEYAQQBRACAAYQB0ADoAIABoAHQAdABwAHMAOgAvAC8AcwBjAHIAaQBwAHQAcwAuAHMAaQBsAC4AbwByAGcALwBPAEYATABoAHQAdABwAHMAOgAvAC8AcwBjAHIAaQBwAHQAcwAuAHMAaQBsAC4AbwByAGcALwBPAEYATAk4CS0JQAAgCS4JKAlBCTcJTQkvCUsJAgAgCRUJSwAgCRcJTAkwCTUAIAkUCTAAIAkFCScJPwkVCT4JMAlLCQIAIAkVCUcAIAkuCT4JLgkyCUcAIAkuCUcJAgAgCRwJKAlNCS4JHAk+CSQAIAk4CU0JNQkkCSgJTQkkCU0JMAkkCT4AIAkUCTAAIAk4CS4JPgkoCSQJPgAgCSoJTQkwCT4JKglNCSQAIAk5CUgJZAADAAAAAAAA/7UAMgAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAKABwAHgABREZMVAAIAAQAAAAA//8AAAAAAAAAAQAAAAoALAAuAANERkxUABRkZXYyAB5kZXZhAB4ABAAAAAD//wAAAAAAAAAAAAA=';
+  var $ = function (id) { return document.getElementById(id); };
+  var PL = function (x, d) { return Number(x).toLocaleString('pl-PL', { minimumFractionDigits: d == null ? 0 : d, maximumFractionDigits: d == null ? 0 : d }); };
+
+  // ---------- rdzeń geometrii
+  var core = null, font = null, fatal = null;
+  try {
+    if (!window.THREE || !window.ClipperLib || !window.opentype || !window.earcut) throw new Error('Nie wczytały się biblioteki z sieci (three, clipper, opentype, earcut). Odśwież stronę.');
+    core = window.SwietaCore({
+      ClipperLib: window.ClipperLib, opentype: window.opentype,
+      triangulate: function (contour, holes) { var flat = [], hi = []; contour.forEach(function (p) { flat.push(p[0], p[1]); }); holes.forEach(function (h) { hi.push(flat.length / 2); h.forEach(function (p) { flat.push(p[0], p[1]); }); }); return window.earcut(flat, hi, 2); }
+    });
+    var bin = atob(FONT_B64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    font = core.loadFont(u8.buffer);
+  } catch (e) { fatal = e; }
+
+  // ---------- podgląd 3D (three.js, własne obracanie: 1 palec / mysz = obrót, 2 palce / kółko = zoom)
+  var viewer = null;
+  function makeViewer(canvas) {
+    var T = window.THREE, renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.localClippingEnabled = true;
+    var scene = new T.Scene(), camera = new T.PerspectiveCamera(32, 1, 1, 5000); camera.up.set(0, 0, 1); scene.add(camera);
+    scene.add(new T.HemisphereLight(0xfff6ea, 0x4a4036, 0.95));
+    var key = new T.DirectionalLight(0xffffff, 0.85); key.position.set(0.5, -0.8, 1.1); camera.add(key);
+    var fill = new T.DirectionalLight(0xffe6cc, 0.25); fill.position.set(-1, -0.2, 0.3); camera.add(fill);
+    var plane = new T.Plane(new T.Vector3(-1, 0, 0), 0), group = new T.Group(); scene.add(group);
+    var v = { az: -20, el: 38, dist: 200, target: new T.Vector3(), radius: 50, mesh: null, ground: null, dirty: true, section: false };
+    var mat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0.0, clippingPlanes: [], side: T.FrontSide });
+    function place() {
+      var a = v.az * Math.PI / 180, e = v.el * Math.PI / 180;
+      camera.position.set(v.target.x + v.dist * Math.cos(e) * Math.sin(a), v.target.y - v.dist * Math.cos(e) * Math.cos(a), v.target.z + v.dist * Math.sin(e));
+      camera.lookAt(v.target); camera.updateProjectionMatrix();
+    }
+    function fit() { var f = camera.fov * Math.PI / 180, fh = v.radius / Math.sin(f / 2), fw = camera.aspect < 1 ? fh / camera.aspect * 0.8 : fh; v.dist = Math.max(fh, fw) * 1.02; }
+    v.resize = function () { var r = canvas.getBoundingClientRect(), w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height)); renderer.setSize(w, h, false); camera.aspect = w / h; v.dirty = true; place(); };
+    v.render = function () { if (!v.dirty) return; v.dirty = false; place(); renderer.render(scene, camera); };
+    v.setMesh = function (geo, opts) {
+      if (v.mesh) { group.remove(v.mesh); v.mesh.geometry.dispose(); }
+      if (v.ground) { group.remove(v.ground); v.ground.geometry.dispose(); v.ground = null; }
+      geo.computeBoundingBox(); var bb = geo.boundingBox, c = new T.Vector3(); bb.getCenter(c);
+      var size = new T.Vector3(); bb.getSize(size);
+      v.mesh = new T.Mesh(geo, mat); group.add(v.mesh);
+      var gr = Math.max(size.x, size.y) * 0.85 + 6;
+      v.ground = new T.Mesh(new T.CircleGeometry(gr, 64), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 })); v.ground.position.z = -0.05; group.add(v.ground);
+      plane.constant = c.x; v.target.copy(c); var r0 = v.radius; v.radius = Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z) / 2;
+      if (opts && opts.reset) { v.az = opts.az; v.el = opts.el; fit(); } else if (r0 > 0) { v.dist *= v.radius / r0; }
+      v.dirty = true;
+    };
+    v.setSection = function (on) { v.section = on; mat.clippingPlanes = on ? [plane] : []; mat.side = on ? T.DoubleSide : T.FrontSide; mat.needsUpdate = true; v.dirty = true; };
+    v.setView = function (az, el) { v.az = az; v.el = el; v.dirty = true; };
+    // sterowanie
+    var ptrs = new Map(), last = 0;
+    canvas.addEventListener('pointerdown', function (e) { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); last = 0; canvas.style.cursor = 'grabbing'; });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!ptrs.has(e.pointerId)) return;
+      var p = ptrs.get(e.pointerId), n = ptrs.size;
+      if (n === 1) { v.az -= (e.clientX - p.x) * 0.5; v.el = Math.max(-80, Math.min(89, v.el + (e.clientY - p.y) * 0.5)); }
+      else if (n === 2) {
+        var o = null; ptrs.forEach(function (q, id) { if (id !== e.pointerId) o = q; });
+        var d0 = Math.hypot(p.x - o.x, p.y - o.y), d1 = Math.hypot(e.clientX - o.x, e.clientY - o.y);
+        if (d0 > 0 && d1 > 0) v.dist = Math.min(v.radius * 12, Math.max(v.radius * 0.6, v.dist * d0 / d1));
+      }
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); v.dirty = true;
+    });
+    var up = function (e) { ptrs.delete(e.pointerId); canvas.style.cursor = 'grab'; };
+    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('wheel', function (e) { e.preventDefault(); v.dist = Math.min(v.radius * 12, Math.max(v.radius * 0.6, v.dist * Math.exp(e.deltaY * 0.0012))); v.dirty = true; }, { passive: false });
+    if (window.ResizeObserver) new ResizeObserver(function () { v.resize(); }).observe(canvas); window.addEventListener('resize', v.resize);
+    (function loop() { v.render(); requestAnimationFrame(loop); })();
+    v.resize();
+    return v;
+  }
+  var COL = { plate: [0.92, 0.87, 0.78], raised: [0.55, 0.33, 0.14], wall: [0.93, 0.89, 0.8], flange: [0.78, 0.4, 0.26], ivory: [0.95, 0.93, 0.88] };
+  function geoFlat(mesh, colorFn) {
+    var T = window.THREE, P = mesh.positions, I = mesh.indices, n = I.length / 3, pos = new Float32Array(n * 9), nor = new Float32Array(n * 9), col = new Float32Array(n * 9);
+    for (var t = 0; t < n; t++) {
+      var a = I[3 * t] * 3, b = I[3 * t + 1] * 3, c = I[3 * t + 2] * 3, ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      var nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.hypot(nx, ny, nz) || 1, zc = (P[a + 2] + P[b + 2] + P[c + 2]) / 3, k = colorFn(zc);
+      [a, b, c].forEach(function (q, j) { var o = t * 9 + j * 3; pos[o] = P[q]; pos[o + 1] = P[q + 1]; pos[o + 2] = P[q + 2]; nor[o] = nx / l; nor[o + 1] = ny / l; nor[o + 2] = nz / l; col[o] = k[0]; col[o + 1] = k[1]; col[o + 2] = k[2]; });
+    }
+    var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3)); return g;
+  }
+  function geoSmooth(mesh, rgb) {
+    var T = window.THREE, g = new T.BufferGeometry(), n = mesh.positions.length / 3, col = new Float32Array(n * 3);
+    for (var i = 0; i < n; i++) { col[3 * i] = rgb[0]; col[3 * i + 1] = rgb[1]; col[3 * i + 2] = rgb[2]; }
+    g.setAttribute('position', new T.BufferAttribute(mesh.positions, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3)); g.setIndex(new T.BufferAttribute(mesh.indices, 1)); g.computeVertexNormals(); return g;
+  }
+
+  // ---------- stan i modele
+  var S = { tab: 'etykieta', name: '', cap: 11, top: 18, h: 200, bulb: 62, shape: 'choinka', scale: 1, flw: 5, flt: 2 };
+  try { var saved = JSON.parse(localStorage.getItem('swieta_state') || '{}'); if (typeof saved.name === 'string') S.name = saved.name.slice(0, 26); if (saved.cap) S.cap = +saved.cap; } catch (e) {}
+  var cur = null;            // { mesh, info, kind, file, stlName }
+  var VIEWS = { etykieta: [[-14, 42], [0, 89], [-30, -50]], czubek: [[28, 14], [0, 0], [60, 60]], foremki: [[24, 36], [0, 89], [24, -50]] };
+  var viewIdx = 0;
+  var TIPS = {
+    etykieta: ['<b>Druk:</b> na płasko, napisem do góry, bez podpór. Płytka 2,0 mm, napis i ramka wypukłe 0,8 mm.', '<b>Dwa kolory:</b> zmień filament na warstwie 2,0 mm, a napis i ramka będą w innym kolorze (na podglądzie ciemniejsze).', '<b>Sznurek:</b> otwór Ø 4,2 mm po lewej stronie.'],
+    czubek: ['<b>Druk:</b> stojąco, tuleją na stole, bez podpór. Jedyny nawis to płaski sufit wnęki Ø 10 mm (mostek).', '<b>Brim:</b> podstawa to pierścień ok. Ø 24 mm, a model jest wysoki. Włącz obwódkę zewnętrzną (brim) ok. 8 mm.', '<b>Dopasowanie:</b> jeśli czubek choinki jest stożkowy, mierz go w miejscu, gdzie tuleja ma się zatrzymać.'],
+    foremki: ['<b>Druk:</b> kołnierzem do stołu, ostrzem do góry, bez podpór. Ścianka 1,2 mm (3 ścieżki dyszy 0,4), ostrze zwężone do 0,45 mm.', '<b>Kołnierz:</b> usztywnia foremkę i służy do dociskania kciukiem. Szerszy i grubszy = sztywniejsza foremka.', '<b>Uwaga:</b> wydruk FDM nie jest trwale bezpieczny dla żywności: tylko krótki kontakt z ciastem i mycie ręczne.']
+  };
+  function slug(s) { return s.toLowerCase().replace(/[ąćęłńóśźż]/g, function (c) { return 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]; }).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'imie'; }
+  function grams(info, infill) { return infill == null ? info.grams : (info.area * 1.0 + infill * (info.volume - info.area * 1.0)) / 1000 * core.PETG; }
+  function facts(list) { $('facts').innerHTML = list.map(function (f) { return '<div><dt>' + f[0] + '</dt><dd' + (f[2] ? ' class="warn"' : '') + '>' + f[1] + '</dd></div>'; }).join(''); }
+  function legend(items) { $('legend').innerHTML = items.map(function (i) { return '<span><i style="background:' + i[1] + '"></i>' + i[0] + '</span>'; }).join(''); }
+  var rgbCss = function (c) { return 'rgb(' + c.map(function (x) { return Math.round(x * 255); }).join(',') + ')'; };
+
+  function build(resetView) {
+    if (fatal) return;
+    var t0 = performance.now(), r, kind = S.tab, vw = VIEWS[S.tab][0], opts = resetView ? { reset: true, az: vw[0], el: vw[1] } : { reset: false };
+    try {
+      if (kind === 'etykieta') {
+        var nm = S.name.trim().replace(/\s+/g, ' ') || 'Imię';
+        r = core.buildLabel(font, nm, S.cap);
+        var i = r.info, fits = i.W <= 250;
+        cur = { mesh: r.mesh, info: i, kind: kind, stl: 'etykieta_' + slug(nm) + '.stl', zip: 'etykieta_dla_' + slug(nm) + '.zip', ready: !!S.name.trim() };
+        viewer && viewer.setMesh(geoFlat(r.mesh, function (z) { return z > 2.0001 ? COL.raised : COL.plate; }), opts);
+        facts([['Wymiary', PL(i.W, 1) + ' × ' + PL(i.H, 1) + ' mm'], ['Grubość', PL(i.extents[2], 1) + ' mm'], ['Masa PETG', 'ok. ' + PL(i.grams, 1) + ' g'], ['Stół P1S', fits ? 'mieści się' : 'za szeroka (maks. 250 mm)', !fits]]);
+        legend([['płytka', rgbCss(COL.plate)], ['napis i ramka (0,8 mm)', rgbCss(COL.raised)]]);
+        cur.ready = cur.ready && fits;
+        $('dl').textContent = 'Pobierz STL: Dla ' + (S.name.trim() || '…');
+      } else if (kind === 'czubek') {
+        r = core.buildTopper({ top: S.top, h: S.h, bulb: S.bulb });
+        var g = r.info.geo;
+        cur = { mesh: r.mesh, info: r.info, kind: kind, stl: 'czubek_choinkowy_top' + PL(S.top, S.top % 1 ? 1 : 0).replace(',', '_') + '_h' + S.h + '_kula' + S.bulb + '.stl', ready: true };
+        cur.zip = cur.stl.replace(/\.stl$/, '.zip');
+        viewer && viewer.setMesh(geoSmooth(r.mesh, COL.ivory), opts);
+        facts([['Wysokość', PL(r.info.extents[2], 0) + ' mm'], ['Kula', 'Ø ' + PL(2 * g.a, 0) + ' × ' + PL(2 * g.b, 0) + ' mm'], ['Tuleja', 'Ø ' + PL(2 * g.r_s, 1) + ' mm'], ['Wnęka na czubek', 'Ø ' + PL(2 * g.r_h, 1) + ' mm, głęb. ' + PL(g.ceil, 0) + ' mm'], ['Żeber', PL(g.Ns[1]) + ' na kuli'], ['Masa PETG', 'ok. ' + PL(grams(r.info, 0.15), 0) + ' g (15% wypełnienia)']]);
+        legend([]);
+      } else {
+        var o = OUTLINES[S.shape];
+        r = core.buildCutter(o, { scale: S.scale, FL_W: S.flw, FL_T: S.flt });
+        var i2 = r.info;
+        cur = { mesh: r.mesh, info: i2, kind: kind, stl: 'foremka_' + S.shape + '.stl', zip: 'foremka_' + S.shape + '_k' + PL(S.flw, 1).replace(',', '_') + 'x' + PL(S.flt, 1).replace(',', '_') + '.zip', ready: true };
+        viewer && viewer.setMesh(geoFlat(r.mesh, function (z) { return z <= S.flt + 0.001 ? COL.flange : COL.wall; }), opts);
+        facts([['Ciasto', PL(i2.dough[0] / 10, 1) + ' × ' + PL(i2.dough[1] / 10, 1) + ' cm'], ['Foremka', PL(i2.extents[0], 0) + ' × ' + PL(i2.extents[1], 0) + ' × ' + PL(i2.extents[2], 0) + ' mm'], ['Kołnierz', PL(S.flw, 1) + ' × ' + PL(S.flt, 1) + ' mm'], ['Masa PETG', 'ok. ' + PL(i2.grams, 0) + ' g']]);
+        legend([['kołnierz (brim)', rgbCss(COL.flange)], ['ścianka i ostrze', rgbCss(COL.wall)]]);
+        $('dl').textContent = 'Pobierz STL: foremka ' + OUTLINES[S.shape].name;
+      }
+      if (kind === 'czubek') $('dl').textContent = 'Pobierz STL: czubek ' + PL(S.h, 0) + ' mm';
+      $('dl').disabled = !cur.ready || !dlApi;
+      $('dlmsg').textContent = !dlApi && dlChecked ? 'Pobieranie pliku nie jest dostępne w tym widoku.' : (kind === 'etykieta' && !S.name.trim() ? 'Wpisz imię, a przycisk się włączy.' : '');
+    } catch (e) {
+      cur = null; $('dl').disabled = true; $('dlmsg').textContent = 'Te wymiary nie pasują do siebie: ' + e.message;
+    }
+    $('stage').classList.remove('loading');
+    $('stage').dataset.ms = String(Math.round(performance.now() - t0));
+  }
+  var timer = null;
+  function schedule(delay) { $('stage').classList.add('loading'); clearTimeout(timer); timer = setTimeout(function () { build(false); }, delay == null ? 90 : delay); }
+
+  // ---------- interfejs
+  function show(tab) {
+    S.tab = tab; viewIdx = 0;
+    $('chip-sec').setAttribute('aria-pressed', 'false'); if (viewer) viewer.setSection(false);
+    $('foot').hidden = tab !== 'etykieta';
+    ['etykieta', 'czubek', 'foremki'].forEach(function (t) { $('tab-' + t).setAttribute('aria-pressed', String(t === tab)); $('panel-' + t).hidden = t !== tab; });
+    $('stage').classList.toggle('tall', tab === 'czubek');
+    $('tips').innerHTML = TIPS[tab].map(function (x) { return '<p>' + x + '</p>'; }).join('');
+    $('dlmsg').textContent = '';
+    if (viewer) viewer.resize();
+    build(true);
+  }
+  function sync() {
+    $('cap-o').textContent = PL(S.cap, 1) + ' mm'; $('top-o').textContent = PL(S.top, S.top % 1 ? 1 : 0) + ' mm'; $('h-o').textContent = PL(S.h, 0) + ' mm'; $('bulb-o').textContent = PL(S.bulb, 0) + ' mm';
+    $('scale-o').textContent = PL(S.scale * 100, 0) + '% · ' + PL(OUTLINES[S.shape].size * S.scale / 10, 1) + ' cm'; $('flw-o').textContent = PL(S.flw, 1) + ' mm'; $('flt-o').textContent = PL(S.flt, 1) + ' mm';
+    try { localStorage.setItem('swieta_state', JSON.stringify({ name: S.name, cap: S.cap })); } catch (e) {}
+  }
+  function clampTopper() {
+    var m = core.topperMin(S.top, S.bulb), bm = $('bulb'), hm = $('h');
+    bm.min = String(Math.max(40, m.bulbMin)); if (S.bulb < +bm.min) { S.bulb = +bm.min; bm.value = String(S.bulb); m = core.topperMin(S.top, S.bulb); }
+    hm.min = String(Math.max(120, Math.ceil(m.hMin / 5) * 5)); if (S.h < +hm.min) { S.h = +hm.min; hm.value = String(S.h); }
+  }
+  function bind() {
+    $('tab-etykieta').onclick = function () { show('etykieta'); }; $('tab-czubek').onclick = function () { show('czubek'); }; $('tab-foremki').onclick = function () { show('foremki'); };
+    $('name').value = S.name; $('cap').value = String(S.cap);
+    $('name').addEventListener('input', function () { S.name = this.value; sync(); schedule(120); });
+    var bindRange = function (id, key, after) { $(id).addEventListener('input', function () { S[key] = parseFloat(this.value); if (after) after(); sync(); schedule(140); }); };
+    bindRange('cap', 'cap'); bindRange('top', 'top', function () { if (core) clampTopper(); }); bindRange('h', 'h'); bindRange('bulb', 'bulb', function () { if (core) clampTopper(); });
+    bindRange('scale', 'scale'); bindRange('flw', 'flw'); bindRange('flt', 'flt');
+    if (OUTLINES) {
+      $('shapes').innerHTML = Object.keys(OUTLINES).filter(function (k) { return k[0] !== '_'; }).map(function (k) { return '<button data-k="' + k + '" aria-pressed="' + (k === S.shape) + '">' + OUTLINES[k].name + '</button>'; }).join('');
+      $('shapes').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.shape = b.dataset.k; Array.prototype.forEach.call($('shapes').children, function (c) { c.setAttribute('aria-pressed', String(c === b)); }); sync(); schedule(10); });
+    }
+    $('chip-sec').addEventListener('click', function () { var on = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', String(on)); if (viewer) viewer.setSection(on); });
+    $('chip-view').addEventListener('click', function () { var L = VIEWS[S.tab]; viewIdx = (viewIdx + 1) % L.length; if (viewer) viewer.setView(L[viewIdx][0], L[viewIdx][1]); });
+    $('dl').addEventListener('click', download);
+  }
+
+  // ---------- pobieranie (capability "downloads": STL nie jest na liście formatów zapisu, więc pakujemy go do ZIP)
+  var dlApi = null, dlChecked = false;
+  function initDownloads() {
+    if (!(window.claude && window.claude.use)) { dlChecked = true; schedule(0); return; }
+    window.claude.use('downloads').then(function (d) { dlApi = d; dlChecked = true; if (cur) { $('dl').disabled = !cur.ready || !dlApi; if (!dlApi) $('dlmsg').textContent = 'Pobieranie pliku nie jest dostępne w tym widoku.'; } }).catch(function () { dlChecked = true; });
+  }
+  function download() {
+    if (!cur || !cur.ready || !dlApi) return;
+    var btn = $('dl'); btn.disabled = true; $('dlmsg').textContent = 'Przygotowuję plik…';
+    setTimeout(function () {
+      var zip;
+      try { zip = core.zipStore(cur.stl, core.toStl(cur.mesh)); } catch (e) { $('dlmsg').textContent = 'Nie udało się zbudować pliku: ' + e.message; btn.disabled = false; return; }
+      dlApi.save({ filename: cur.zip, data: zip }).then(function () {
+        $('dlmsg').textContent = 'Zapisano ' + cur.zip + '. Rozpakuj ZIP i otwórz ' + cur.stl + ' w Bambu Studio.';
+      }, function (err) {
+        var c = err && err.code;
+        $('dlmsg').textContent = c === 'declined' ? 'Anulowano.' : (c === 'rate_limited' ? 'Poczekaj chwilę i spróbuj jeszcze raz.' : 'Nie udało się zapisać pliku (' + (c || 'błąd') + ').');
+      }).then(function () { btn.disabled = !(cur && cur.ready && dlApi); });
+    }, 30);
+  }
+
+  // ---------- start
+  if (fatal) { $('stagemsg').textContent = fatal.message; $('stage').classList.add('err'); $('dl').disabled = true; }
+  else {
+    try { viewer = makeViewer($('cv')); window.__viewer = viewer; } catch (e) { $('stage').classList.add('err'); }
+  }
+  bind();
+  if (core) { clampTopper(); }
+  sync();
+  if (core) {
+    show('etykieta'); initDownloads();
+    window.__swieta = { S: S, core: core, font: font, build: build, cur: function () { return cur; }, show: show };
+  }
+})();
+</script>

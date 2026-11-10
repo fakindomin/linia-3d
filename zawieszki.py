@@ -1,4 +1,5 @@
-"""Zawieszki (etykiety) na prezenty: płaska płytka 2 mm z otworem Ø 4,2 mm na sznurek, wypukła ramka 0,8 mm wzdłuż brzegu i wokół otworu,
+"""NIEAKTUALNE: zastąpione przez etykieta.py (zostawione dla historii, nie jest już w build_all.sh).
+Zawieszki (etykiety) na prezenty: płaska płytka 2 mm z otworem Ø 4,2 mm na sznurek, wypukła ramka 0,8 mm wzdłuż brzegu i wokół otworu,
 wypukły napis (DejaVu Sans Bold, polskie znaki). Kształty: prostokąt ze ściętymi rogami, bombka (koło), choinka, gwiazdka, renifer
 (te same obrysy co w foremki_piernik.py). Druk NA PŁASKO, napisem do góry, bez podpór (wszystko to pionowe ścianki na płycie).
   python3 zawieszki.py                 -> out/zawieszka_{prostokat,bombka,choinka,gwiazdka,renifer}.stl z napisami 'DLA:' i 'OD:'

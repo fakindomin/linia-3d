@@ -35,8 +35,9 @@ python3 jelen_glowa90.py           # jelen_stojacy_glowa90.stl (glowa obrocona o
 python3 jelen.py                    # jelen_stojacy.stl (50 mm, gladki): kontrole wysokosci, srodka masy, stop, nawisow (naprawa nawisow: nawisy.py)
 python3 choinka_miska.py            # choinka_miska_100/80 (gladka, krawedzie zaokraglone): kontrola wymiarow, scianek, gladkosci i miejsca na stole (ok. 5 min)
 python3 foremki_piernik.py          # foremka_{choinka,renifer,balwan,ludzik,gwiazdka}.stl (+ foremki_piernik.png)
-python3 gwiazda_choinkowa.py        # gwiazda_choinkowa.stl (tuleja na czubek; argument = srednica czubka, domyslnie 18 mm) (+ .png)
-python3 zawieszki.py                # zawieszka_{prostokat,bombka,choinka,gwiazdka,renifer}.stl (z imionami: python3 zawieszki.py Ania Tomek)
+python3 foremki_piernik.py --json     # artifact/swieta_outlines.json (obrysy foremek dla artefaktu)
+python3 czubek_choinkowy.py             # czubek_choinkowy.stl (wydluzony czubek: tuleja + kula + iglica; opcje --top --h --bulb)
+python3 etykieta.py Ania Tomek          # etykieta_<imie>.stl (poziomo: "Dla" + imie, szerokosc dopasowana)
 python3 build_test.py               # test_czop, test_gniazdo_blok (probka pasowania na drukarke)
 python3 build_std_ribbed_parts.py   # STANDARD v1.0: czesci zebrowane przyciete do koperty (nadpisuje wersje powyzej)
 python3 build_std_lowpoly.py        # wszystkie lp_*.stl

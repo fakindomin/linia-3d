@@ -1,4 +1,5 @@
-"""Gwiazda na czubek choinki: gwiazda pięcioramienna (foremka ma ten sam kształt), grubość 9 mm, na obu płaszczyznach pionowe żebra (jak w linii),
+"""NIEAKTUALNE: zastąpione przez czubek_choinkowy.py (zostawione dla historii, nie jest już w build_all.sh).
+Gwiazda na czubek choinki: gwiazda pięcioramienna (foremka ma ten sam kształt), grubość 9 mm, na obu płaszczyznach pionowe żebra (jak w linii),
 zaokrąglone krawędzie, TULEJA na czubek choinki pod spodem. Druk STOJĄCY (tuleja na stole), bez podpór:
   - gwiazda foremkowa (regularna: wewnętrzny/zewnętrzny = 0,382) ma dolne krawędzie ramion 36° od poziomu = 54° od pionu (STANDARD: <= 55°),
     płaszczyzny gwiazdy i żebra są pionowe; ramiona dolne i tuleja stoją na stole (ramiona spłaszczone o 0,8 mm),

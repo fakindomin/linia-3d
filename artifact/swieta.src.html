@@ -1,0 +1,387 @@
+<title>Świąteczne dodatki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<style>
+  :root {
+    --bg: #f3eee5; --surface: #fbf8f2; --ink: #2a2521; --muted: #6a6157; --line: #ddd3c4;
+    --accent: #566b58; --accent-ink: #ffffff; --accent-soft: #e3e9df; --clay: #b8613f; --warn: #a63f22;
+    --stage-a: #3a352f; --stage-b: #221f1b; --field: #ffffff;
+    --serif: "Fraunces", "Iowan Old Style", Georgia, serif; --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1815; --surface: #25211d; --ink: #efe8dc; --muted: #aaa093; --line: #3a342e;
+      --accent: #a3b9a4; --accent-ink: #1b1815; --accent-soft: #2f3830; --clay: #dc8a66; --warn: #e88f70; --field: #1f1c19; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1815; --surface: #25211d; --ink: #efe8dc; --muted: #aaa093; --line: #3a342e;
+    --accent: #a3b9a4; --accent-ink: #1b1815; --accent-soft: #2f3830; --clay: #dc8a66; --warn: #e88f70; --field: #1f1c19; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--sans); margin: 0; padding-inline: 16px; padding-block: 20px 40px; }
+  .app { max-width: 720px; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { margin: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h1 { font: 600 30px/1.1 var(--serif); margin: 6px 0 8px; text-wrap: balance; }
+  .lede { margin: 0; color: var(--muted); max-width: 52ch; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+  .tabs button { font: 500 15px var(--sans); color: var(--muted); background: transparent; border: 0; border-radius: 10px; padding: 10px 6px; min-height: 44px; cursor: pointer; }
+  .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .tabs button:focus-visible, .chip:focus-visible, .primary:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .stage { position: relative; border-radius: 18px; overflow: hidden; background: radial-gradient(ellipse at 50% 35%, var(--stage-a), var(--stage-b)); aspect-ratio: 4 / 3; max-height: 72vh; width: 100%; }
+  .stage.tall { aspect-ratio: 3 / 4; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; cursor: grab; }
+  .stage .bar { position: absolute; inset-inline: 10px; bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; justify-content: space-between; pointer-events: none; }
+  .stage .bar > * { pointer-events: auto; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: #e9e0d2; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px; }
+  .chips { display: flex; gap: 6px; }
+  .chip { font: 500 13px var(--sans); color: #efe8dc; background: rgba(20, 18, 15, .55); border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 6px 12px; min-height: 32px; cursor: pointer; backdrop-filter: blur(4px); }
+  .chip[aria-pressed="true"] { background: #efe8dc; color: #221f1b; }
+  .stage .msg { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 24px; color: #efe8dc; font-size: 14px; }
+  .stage.err .msg { display: flex; }
+  .stage .busy { position: absolute; top: 10px; inset-inline-end: 12px; font-size: 12px; color: #efe8dc; opacity: 0; transition: opacity .15s; }
+  .stage.loading .busy { opacity: .85; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .panel[hidden] { display: none; }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .lab { display: flex; justify-content: space-between; gap: 12px; font-weight: 500; }
+  .lab output { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 400; }
+  .hint { margin: 0; font-size: 13px; color: var(--muted); }
+  input[type="text"] { font: 500 20px var(--sans); color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%; min-height: 52px; }
+  input[type="text"]::placeholder { color: var(--muted); opacity: .7; font-weight: 400; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); min-height: 32px; margin: 0; }
+  .shapes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .shapes button { font: 500 14px var(--sans); color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; min-height: 40px; cursor: pointer; }
+  .shapes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px 16px; margin: 0; }
+  .facts div { min-width: 0; }
+  .facts dt { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .facts dd { margin: 2px 0 0; font: 500 17px var(--sans); font-variant-numeric: tabular-nums; }
+  .warn { color: var(--warn); font-weight: 500; }
+  .primary { font: 600 16px var(--sans); color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 14px; padding: 14px 18px; min-height: 52px; width: 100%; cursor: pointer; }
+  .primary:disabled { opacity: .45; cursor: not-allowed; }
+  .dlmsg { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--muted); }
+  .tips { background: transparent; border-inline-start: 3px solid var(--accent); padding: 2px 0 2px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--muted); }
+  .tips p { margin: 0; }
+  .tips b { color: var(--ink); font-weight: 600; }
+  footer { font-size: 12px; color: var(--muted); }
+  @media (min-width: 640px) { body { padding-block: 32px 56px; } h1 { font-size: 38px; } .stage { aspect-ratio: 16 / 10; } .stage.tall { aspect-ratio: 4 / 5; max-height: 80vh; } }
+</style>
+
+<main class="app">
+  <header>
+    <p class="eyebrow">Linia japandi · Bambu P1S · PETG · bez podpór</p>
+    <h1>Świąteczne dodatki</h1>
+    <p class="lede">Wpisz imię albo ustaw rozmiar, obejrzyj model z każdej strony i pobierz gotowy STL.</p>
+  </header>
+
+  <div class="tabs" role="group" aria-label="Model">
+    <button id="tab-etykieta" aria-pressed="true">Etykieta</button>
+    <button id="tab-czubek" aria-pressed="false">Czubek</button>
+    <button id="tab-foremki" aria-pressed="false">Foremki</button>
+  </div>
+
+  <section class="stage" id="stage" aria-label="Podgląd 3D: przeciągnij, aby obrócić, uszczypnij, aby przybliżyć">
+    <canvas id="cv"></canvas>
+    <div class="msg" id="stagemsg">Podgląd 3D niedostępny w tej przeglądarce. Pobieranie nadal działa.</div>
+    <div class="busy" id="busy">liczę…</div>
+    <div class="bar">
+      <div class="legend" id="legend"></div>
+      <div class="chips"><button class="chip" id="chip-sec" aria-pressed="false">Przekrój</button><button class="chip" id="chip-view">Widok</button></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-etykieta">
+    <label class="field">
+      <span class="lab">Imię na etykiecie</span>
+      <input type="text" id="name" maxlength="26" placeholder="np. Ania" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
+      <p class="hint">Na etykiecie będzie napis „Dla” i pod nim to, co wpiszesz. Polskie znaki działają, szerokość dopasowuje się sama.</p>
+    </label>
+    <label class="field">
+      <span class="lab">Wysokość liter imienia <output id="cap-o"></output></span>
+      <input type="range" id="cap" min="7" max="15" step="0.5" value="11">
+    </label>
+  </section>
+
+  <section class="panel" id="panel-czubek" hidden>
+    <label class="field">
+      <span class="lab">Średnica czubka choinki <output id="top-o"></output></span>
+      <input type="range" id="top" min="8" max="30" step="0.5" value="18">
+      <p class="hint">Zmierz suwmiarką miejsce, na które czubek ma wejść. Wnęka ma 0,6 mm luzu.</p>
+    </label>
+    <label class="field">
+      <span class="lab">Wysokość całkowita <output id="h-o"></output></span>
+      <input type="range" id="h" min="120" max="240" step="5" value="200">
+    </label>
+    <label class="field">
+      <span class="lab">Średnica kuli <output id="bulb-o"></output></span>
+      <input type="range" id="bulb" min="40" max="100" step="1" value="62">
+    </label>
+  </section>
+
+  <section class="panel" id="panel-foremki" hidden>
+    <div class="field">
+      <span class="lab">Kształt</span>
+      <div class="shapes" id="shapes"></div>
+    </div>
+    <label class="field">
+      <span class="lab">Rozmiar ciasta (wysokość) <output id="scale-o"></output></span>
+      <input type="range" id="scale" min="0.7" max="1.3" step="0.05" value="1">
+    </label>
+    <label class="field">
+      <span class="lab">Kołnierz (brim): szerokość <output id="flw-o"></output></span>
+      <input type="range" id="flw" min="3" max="10" step="0.5" value="5">
+    </label>
+    <label class="field">
+      <span class="lab">Kołnierz (brim): grubość <output id="flt-o"></output></span>
+      <input type="range" id="flt" min="1.6" max="4" step="0.2" value="2">
+      <p class="hint">Kołnierz biegnie dookoła całej foremki, od strony dociskania, i jest częścią modelu na stałe. Na podglądzie ma kolor glinki.</p>
+    </label>
+  </section>
+
+  <section class="panel">
+    <dl class="facts" id="facts"></dl>
+    <button class="primary" id="dl" disabled>Pobierz STL</button>
+    <p class="dlmsg" id="dlmsg" role="status"></p>
+  </section>
+
+  <section class="tips" id="tips"></section>
+  <footer id="foot">Czcionka etykiet: Poppins Bold (SIL OFL). Geometria liczona w przeglądarce tym samym algorytmem co skrypty Pythona w repozytorium linia-3d.</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/earcut@2.2.4/dist/earcut.min.js"></script>
+<script>
+/*__CORE__*/
+</script>
+<script>
+(function () {
+  'use strict';
+  var OUTLINES = /*__OUTLINES__*/ null;
+  var FONT_B64 = '/*__FONT_B64__*/';
+  var $ = function (id) { return document.getElementById(id); };
+  var PL = function (x, d) { return Number(x).toLocaleString('pl-PL', { minimumFractionDigits: d == null ? 0 : d, maximumFractionDigits: d == null ? 0 : d }); };
+
+  // ---------- rdzeń geometrii
+  var core = null, font = null, fatal = null;
+  try {
+    if (!window.THREE || !window.ClipperLib || !window.opentype || !window.earcut) throw new Error('Nie wczytały się biblioteki z sieci (three, clipper, opentype, earcut). Odśwież stronę.');
+    core = window.SwietaCore({
+      ClipperLib: window.ClipperLib, opentype: window.opentype,
+      triangulate: function (contour, holes) { var flat = [], hi = []; contour.forEach(function (p) { flat.push(p[0], p[1]); }); holes.forEach(function (h) { hi.push(flat.length / 2); h.forEach(function (p) { flat.push(p[0], p[1]); }); }); return window.earcut(flat, hi, 2); }
+    });
+    var bin = atob(FONT_B64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    font = core.loadFont(u8.buffer);
+  } catch (e) { fatal = e; }
+
+  // ---------- podgląd 3D (three.js, własne obracanie: 1 palec / mysz = obrót, 2 palce / kółko = zoom)
+  var viewer = null;
+  function makeViewer(canvas) {
+    var T = window.THREE, renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.localClippingEnabled = true;
+    var scene = new T.Scene(), camera = new T.PerspectiveCamera(32, 1, 1, 5000); camera.up.set(0, 0, 1); scene.add(camera);
+    scene.add(new T.HemisphereLight(0xfff6ea, 0x4a4036, 0.95));
+    var key = new T.DirectionalLight(0xffffff, 0.85); key.position.set(0.5, -0.8, 1.1); camera.add(key);
+    var fill = new T.DirectionalLight(0xffe6cc, 0.25); fill.position.set(-1, -0.2, 0.3); camera.add(fill);
+    var plane = new T.Plane(new T.Vector3(-1, 0, 0), 0), group = new T.Group(); scene.add(group);
+    var v = { az: -20, el: 38, dist: 200, target: new T.Vector3(), radius: 50, mesh: null, ground: null, dirty: true, section: false };
+    var mat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0.0, clippingPlanes: [], side: T.FrontSide });
+    function place() {
+      var a = v.az * Math.PI / 180, e = v.el * Math.PI / 180;
+      camera.position.set(v.target.x + v.dist * Math.cos(e) * Math.sin(a), v.target.y - v.dist * Math.cos(e) * Math.cos(a), v.target.z + v.dist * Math.sin(e));
+      camera.lookAt(v.target); camera.updateProjectionMatrix();
+    }
+    function fit() { var f = camera.fov * Math.PI / 180, fh = v.radius / Math.sin(f / 2), fw = camera.aspect < 1 ? fh / camera.aspect * 0.8 : fh; v.dist = Math.max(fh, fw) * 1.02; }
+    v.resize = function () { var r = canvas.getBoundingClientRect(), w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height)); renderer.setSize(w, h, false); camera.aspect = w / h; v.dirty = true; place(); };
+    v.render = function () { if (!v.dirty) return; v.dirty = false; place(); renderer.render(scene, camera); };
+    v.setMesh = function (geo, opts) {
+      if (v.mesh) { group.remove(v.mesh); v.mesh.geometry.dispose(); }
+      if (v.ground) { group.remove(v.ground); v.ground.geometry.dispose(); v.ground = null; }
+      geo.computeBoundingBox(); var bb = geo.boundingBox, c = new T.Vector3(); bb.getCenter(c);
+      var size = new T.Vector3(); bb.getSize(size);
+      v.mesh = new T.Mesh(geo, mat); group.add(v.mesh);
+      var gr = Math.max(size.x, size.y) * 0.85 + 6;
+      v.ground = new T.Mesh(new T.CircleGeometry(gr, 64), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 })); v.ground.position.z = -0.05; group.add(v.ground);
+      plane.constant = c.x; v.target.copy(c); var r0 = v.radius; v.radius = Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z) / 2;
+      if (opts && opts.reset) { v.az = opts.az; v.el = opts.el; fit(); } else if (r0 > 0) { v.dist *= v.radius / r0; }
+      v.dirty = true;
+    };
+    v.setSection = function (on) { v.section = on; mat.clippingPlanes = on ? [plane] : []; mat.side = on ? T.DoubleSide : T.FrontSide; mat.needsUpdate = true; v.dirty = true; };
+    v.setView = function (az, el) { v.az = az; v.el = el; v.dirty = true; };
+    // sterowanie
+    var ptrs = new Map(), last = 0;
+    canvas.addEventListener('pointerdown', function (e) { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); last = 0; canvas.style.cursor = 'grabbing'; });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!ptrs.has(e.pointerId)) return;
+      var p = ptrs.get(e.pointerId), n = ptrs.size;
+      if (n === 1) { v.az -= (e.clientX - p.x) * 0.5; v.el = Math.max(-80, Math.min(89, v.el + (e.clientY - p.y) * 0.5)); }
+      else if (n === 2) {
+        var o = null; ptrs.forEach(function (q, id) { if (id !== e.pointerId) o = q; });
+        var d0 = Math.hypot(p.x - o.x, p.y - o.y), d1 = Math.hypot(e.clientX - o.x, e.clientY - o.y);
+        if (d0 > 0 && d1 > 0) v.dist = Math.min(v.radius * 12, Math.max(v.radius * 0.6, v.dist * d0 / d1));
+      }
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); v.dirty = true;
+    });
+    var up = function (e) { ptrs.delete(e.pointerId); canvas.style.cursor = 'grab'; };
+    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('wheel', function (e) { e.preventDefault(); v.dist = Math.min(v.radius * 12, Math.max(v.radius * 0.6, v.dist * Math.exp(e.deltaY * 0.0012))); v.dirty = true; }, { passive: false });
+    if (window.ResizeObserver) new ResizeObserver(function () { v.resize(); }).observe(canvas); window.addEventListener('resize', v.resize);
+    (function loop() { v.render(); requestAnimationFrame(loop); })();
+    v.resize();
+    return v;
+  }
+  var COL = { plate: [0.92, 0.87, 0.78], raised: [0.55, 0.33, 0.14], wall: [0.93, 0.89, 0.8], flange: [0.78, 0.4, 0.26], ivory: [0.95, 0.93, 0.88] };
+  function geoFlat(mesh, colorFn) {
+    var T = window.THREE, P = mesh.positions, I = mesh.indices, n = I.length / 3, pos = new Float32Array(n * 9), nor = new Float32Array(n * 9), col = new Float32Array(n * 9);
+    for (var t = 0; t < n; t++) {
+      var a = I[3 * t] * 3, b = I[3 * t + 1] * 3, c = I[3 * t + 2] * 3, ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      var nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.hypot(nx, ny, nz) || 1, zc = (P[a + 2] + P[b + 2] + P[c + 2]) / 3, k = colorFn(zc);
+      [a, b, c].forEach(function (q, j) { var o = t * 9 + j * 3; pos[o] = P[q]; pos[o + 1] = P[q + 1]; pos[o + 2] = P[q + 2]; nor[o] = nx / l; nor[o + 1] = ny / l; nor[o + 2] = nz / l; col[o] = k[0]; col[o + 1] = k[1]; col[o + 2] = k[2]; });
+    }
+    var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3)); return g;
+  }
+  function geoSmooth(mesh, rgb) {
+    var T = window.THREE, g = new T.BufferGeometry(), n = mesh.positions.length / 3, col = new Float32Array(n * 3);
+    for (var i = 0; i < n; i++) { col[3 * i] = rgb[0]; col[3 * i + 1] = rgb[1]; col[3 * i + 2] = rgb[2]; }
+    g.setAttribute('position', new T.BufferAttribute(mesh.positions, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3)); g.setIndex(new T.BufferAttribute(mesh.indices, 1)); g.computeVertexNormals(); return g;
+  }
+
+  // ---------- stan i modele
+  var S = { tab: 'etykieta', name: '', cap: 11, top: 18, h: 200, bulb: 62, shape: 'choinka', scale: 1, flw: 5, flt: 2 };
+  try { var saved = JSON.parse(localStorage.getItem('swieta_state') || '{}'); if (typeof saved.name === 'string') S.name = saved.name.slice(0, 26); if (saved.cap) S.cap = +saved.cap; } catch (e) {}
+  var cur = null;            // { mesh, info, kind, file, stlName }
+  var VIEWS = { etykieta: [[-14, 42], [0, 89], [-30, -50]], czubek: [[28, 14], [0, 0], [60, 60]], foremki: [[24, 36], [0, 89], [24, -50]] };
+  var viewIdx = 0;
+  var TIPS = {
+    etykieta: ['<b>Druk:</b> na płasko, napisem do góry, bez podpór. Płytka 2,0 mm, napis i ramka wypukłe 0,8 mm.', '<b>Dwa kolory:</b> zmień filament na warstwie 2,0 mm, a napis i ramka będą w innym kolorze (na podglądzie ciemniejsze).', '<b>Sznurek:</b> otwór Ø 4,2 mm po lewej stronie.'],
+    czubek: ['<b>Druk:</b> stojąco, tuleją na stole, bez podpór. Jedyny nawis to płaski sufit wnęki Ø 10 mm (mostek).', '<b>Brim:</b> podstawa to pierścień ok. Ø 24 mm, a model jest wysoki. Włącz obwódkę zewnętrzną (brim) ok. 8 mm.', '<b>Dopasowanie:</b> jeśli czubek choinki jest stożkowy, mierz go w miejscu, gdzie tuleja ma się zatrzymać.'],
+    foremki: ['<b>Druk:</b> kołnierzem do stołu, ostrzem do góry, bez podpór. Ścianka 1,2 mm (3 ścieżki dyszy 0,4), ostrze zwężone do 0,45 mm.', '<b>Kołnierz:</b> usztywnia foremkę i służy do dociskania kciukiem. Szerszy i grubszy = sztywniejsza foremka.', '<b>Uwaga:</b> wydruk FDM nie jest trwale bezpieczny dla żywności: tylko krótki kontakt z ciastem i mycie ręczne.']
+  };
+  function slug(s) { return s.toLowerCase().replace(/[ąćęłńóśźż]/g, function (c) { return 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]; }).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'imie'; }
+  function grams(info, infill) { return infill == null ? info.grams : (info.area * 1.0 + infill * (info.volume - info.area * 1.0)) / 1000 * core.PETG; }
+  function facts(list) { $('facts').innerHTML = list.map(function (f) { return '<div><dt>' + f[0] + '</dt><dd' + (f[2] ? ' class="warn"' : '') + '>' + f[1] + '</dd></div>'; }).join(''); }
+  function legend(items) { $('legend').innerHTML = items.map(function (i) { return '<span><i style="background:' + i[1] + '"></i>' + i[0] + '</span>'; }).join(''); }
+  var rgbCss = function (c) { return 'rgb(' + c.map(function (x) { return Math.round(x * 255); }).join(',') + ')'; };
+
+  function build(resetView) {
+    if (fatal) return;
+    var t0 = performance.now(), r, kind = S.tab, vw = VIEWS[S.tab][0], opts = resetView ? { reset: true, az: vw[0], el: vw[1] } : { reset: false };
+    try {
+      if (kind === 'etykieta') {
+        var nm = S.name.trim().replace(/\s+/g, ' ') || 'Imię';
+        r = core.buildLabel(font, nm, S.cap);
+        var i = r.info, fits = i.W <= 250;
+        cur = { mesh: r.mesh, info: i, kind: kind, stl: 'etykieta_' + slug(nm) + '.stl', zip: 'etykieta_dla_' + slug(nm) + '.zip', ready: !!S.name.trim() };
+        viewer && viewer.setMesh(geoFlat(r.mesh, function (z) { return z > 2.0001 ? COL.raised : COL.plate; }), opts);
+        facts([['Wymiary', PL(i.W, 1) + ' × ' + PL(i.H, 1) + ' mm'], ['Grubość', PL(i.extents[2], 1) + ' mm'], ['Masa PETG', 'ok. ' + PL(i.grams, 1) + ' g'], ['Stół P1S', fits ? 'mieści się' : 'za szeroka (maks. 250 mm)', !fits]]);
+        legend([['płytka', rgbCss(COL.plate)], ['napis i ramka (0,8 mm)', rgbCss(COL.raised)]]);
+        cur.ready = cur.ready && fits;
+        $('dl').textContent = 'Pobierz STL: Dla ' + (S.name.trim() || '…');
+      } else if (kind === 'czubek') {
+        r = core.buildTopper({ top: S.top, h: S.h, bulb: S.bulb });
+        var g = r.info.geo;
+        cur = { mesh: r.mesh, info: r.info, kind: kind, stl: 'czubek_choinkowy_top' + PL(S.top, S.top % 1 ? 1 : 0).replace(',', '_') + '_h' + S.h + '_kula' + S.bulb + '.stl', ready: true };
+        cur.zip = cur.stl.replace(/\.stl$/, '.zip');
+        viewer && viewer.setMesh(geoSmooth(r.mesh, COL.ivory), opts);
+        facts([['Wysokość', PL(r.info.extents[2], 0) + ' mm'], ['Kula', 'Ø ' + PL(2 * g.a, 0) + ' × ' + PL(2 * g.b, 0) + ' mm'], ['Tuleja', 'Ø ' + PL(2 * g.r_s, 1) + ' mm'], ['Wnęka na czubek', 'Ø ' + PL(2 * g.r_h, 1) + ' mm, głęb. ' + PL(g.ceil, 0) + ' mm'], ['Żeber', PL(g.Ns[1]) + ' na kuli'], ['Masa PETG', 'ok. ' + PL(grams(r.info, 0.15), 0) + ' g (15% wypełnienia)']]);
+        legend([]);
+      } else {
+        var o = OUTLINES[S.shape];
+        r = core.buildCutter(o, { scale: S.scale, FL_W: S.flw, FL_T: S.flt });
+        var i2 = r.info;
+        cur = { mesh: r.mesh, info: i2, kind: kind, stl: 'foremka_' + S.shape + '.stl', zip: 'foremka_' + S.shape + '_k' + PL(S.flw, 1).replace(',', '_') + 'x' + PL(S.flt, 1).replace(',', '_') + '.zip', ready: true };
+        viewer && viewer.setMesh(geoFlat(r.mesh, function (z) { return z <= S.flt + 0.001 ? COL.flange : COL.wall; }), opts);
+        facts([['Ciasto', PL(i2.dough[0] / 10, 1) + ' × ' + PL(i2.dough[1] / 10, 1) + ' cm'], ['Foremka', PL(i2.extents[0], 0) + ' × ' + PL(i2.extents[1], 0) + ' × ' + PL(i2.extents[2], 0) + ' mm'], ['Kołnierz', PL(S.flw, 1) + ' × ' + PL(S.flt, 1) + ' mm'], ['Masa PETG', 'ok. ' + PL(i2.grams, 0) + ' g']]);
+        legend([['kołnierz (brim)', rgbCss(COL.flange)], ['ścianka i ostrze', rgbCss(COL.wall)]]);
+        $('dl').textContent = 'Pobierz STL: foremka ' + OUTLINES[S.shape].name;
+      }
+      if (kind === 'czubek') $('dl').textContent = 'Pobierz STL: czubek ' + PL(S.h, 0) + ' mm';
+      $('dl').disabled = !cur.ready || !dlApi;
+      $('dlmsg').textContent = !dlApi && dlChecked ? 'Pobieranie pliku nie jest dostępne w tym widoku.' : (kind === 'etykieta' && !S.name.trim() ? 'Wpisz imię, a przycisk się włączy.' : '');
+    } catch (e) {
+      cur = null; $('dl').disabled = true; $('dlmsg').textContent = 'Te wymiary nie pasują do siebie: ' + e.message;
+    }
+    $('stage').classList.remove('loading');
+    $('stage').dataset.ms = String(Math.round(performance.now() - t0));
+  }
+  var timer = null;
+  function schedule(delay) { $('stage').classList.add('loading'); clearTimeout(timer); timer = setTimeout(function () { build(false); }, delay == null ? 90 : delay); }
+
+  // ---------- interfejs
+  function show(tab) {
+    S.tab = tab; viewIdx = 0;
+    $('chip-sec').setAttribute('aria-pressed', 'false'); if (viewer) viewer.setSection(false);
+    $('foot').hidden = tab !== 'etykieta';
+    ['etykieta', 'czubek', 'foremki'].forEach(function (t) { $('tab-' + t).setAttribute('aria-pressed', String(t === tab)); $('panel-' + t).hidden = t !== tab; });
+    $('stage').classList.toggle('tall', tab === 'czubek');
+    $('tips').innerHTML = TIPS[tab].map(function (x) { return '<p>' + x + '</p>'; }).join('');
+    $('dlmsg').textContent = '';
+    if (viewer) viewer.resize();
+    build(true);
+  }
+  function sync() {
+    $('cap-o').textContent = PL(S.cap, 1) + ' mm'; $('top-o').textContent = PL(S.top, S.top % 1 ? 1 : 0) + ' mm'; $('h-o').textContent = PL(S.h, 0) + ' mm'; $('bulb-o').textContent = PL(S.bulb, 0) + ' mm';
+    $('scale-o').textContent = PL(S.scale * 100, 0) + '% · ' + PL(OUTLINES[S.shape].size * S.scale / 10, 1) + ' cm'; $('flw-o').textContent = PL(S.flw, 1) + ' mm'; $('flt-o').textContent = PL(S.flt, 1) + ' mm';
+    try { localStorage.setItem('swieta_state', JSON.stringify({ name: S.name, cap: S.cap })); } catch (e) {}
+  }
+  function clampTopper() {
+    var m = core.topperMin(S.top, S.bulb), bm = $('bulb'), hm = $('h');
+    bm.min = String(Math.max(40, m.bulbMin)); if (S.bulb < +bm.min) { S.bulb = +bm.min; bm.value = String(S.bulb); m = core.topperMin(S.top, S.bulb); }
+    hm.min = String(Math.max(120, Math.ceil(m.hMin / 5) * 5)); if (S.h < +hm.min) { S.h = +hm.min; hm.value = String(S.h); }
+  }
+  function bind() {
+    $('tab-etykieta').onclick = function () { show('etykieta'); }; $('tab-czubek').onclick = function () { show('czubek'); }; $('tab-foremki').onclick = function () { show('foremki'); };
+    $('name').value = S.name; $('cap').value = String(S.cap);
+    $('name').addEventListener('input', function () { S.name = this.value; sync(); schedule(120); });
+    var bindRange = function (id, key, after) { $(id).addEventListener('input', function () { S[key] = parseFloat(this.value); if (after) after(); sync(); schedule(140); }); };
+    bindRange('cap', 'cap'); bindRange('top', 'top', function () { if (core) clampTopper(); }); bindRange('h', 'h'); bindRange('bulb', 'bulb', function () { if (core) clampTopper(); });
+    bindRange('scale', 'scale'); bindRange('flw', 'flw'); bindRange('flt', 'flt');
+    if (OUTLINES) {
+      $('shapes').innerHTML = Object.keys(OUTLINES).filter(function (k) { return k[0] !== '_'; }).map(function (k) { return '<button data-k="' + k + '" aria-pressed="' + (k === S.shape) + '">' + OUTLINES[k].name + '</button>'; }).join('');
+      $('shapes').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.shape = b.dataset.k; Array.prototype.forEach.call($('shapes').children, function (c) { c.setAttribute('aria-pressed', String(c === b)); }); sync(); schedule(10); });
+    }
+    $('chip-sec').addEventListener('click', function () { var on = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', String(on)); if (viewer) viewer.setSection(on); });
+    $('chip-view').addEventListener('click', function () { var L = VIEWS[S.tab]; viewIdx = (viewIdx + 1) % L.length; if (viewer) viewer.setView(L[viewIdx][0], L[viewIdx][1]); });
+    $('dl').addEventListener('click', download);
+  }
+
+  // ---------- pobieranie (capability "downloads": STL nie jest na liście formatów zapisu, więc pakujemy go do ZIP)
+  var dlApi = null, dlChecked = false;
+  function initDownloads() {
+    if (!(window.claude && window.claude.use)) { dlChecked = true; schedule(0); return; }
+    window.claude.use('downloads').then(function (d) { dlApi = d; dlChecked = true; if (cur) { $('dl').disabled = !cur.ready || !dlApi; if (!dlApi) $('dlmsg').textContent = 'Pobieranie pliku nie jest dostępne w tym widoku.'; } }).catch(function () { dlChecked = true; });
+  }
+  function download() {
+    if (!cur || !cur.ready || !dlApi) return;
+    var btn = $('dl'); btn.disabled = true; $('dlmsg').textContent = 'Przygotowuję plik…';
+    setTimeout(function () {
+      var zip;
+      try { zip = core.zipStore(cur.stl, core.toStl(cur.mesh)); } catch (e) { $('dlmsg').textContent = 'Nie udało się zbudować pliku: ' + e.message; btn.disabled = false; return; }
+      dlApi.save({ filename: cur.zip, data: zip }).then(function () {
+        $('dlmsg').textContent = 'Zapisano ' + cur.zip + '. Rozpakuj ZIP i otwórz ' + cur.stl + ' w Bambu Studio.';
+      }, function (err) {
+        var c = err && err.code;
+        $('dlmsg').textContent = c === 'declined' ? 'Anulowano.' : (c === 'rate_limited' ? 'Poczekaj chwilę i spróbuj jeszcze raz.' : 'Nie udało się zapisać pliku (' + (c || 'błąd') + ').');
+      }).then(function () { btn.disabled = !(cur && cur.ready && dlApi); });
+    }, 30);
+  }
+
+  // ---------- start
+  if (fatal) { $('stagemsg').textContent = fatal.message; $('stage').classList.add('err'); $('dl').disabled = true; }
+  else {
+    try { viewer = makeViewer($('cv')); window.__viewer = viewer; } catch (e) { $('stage').classList.add('err'); }
+  }
+  bind();
+  if (core) { clampTopper(); }
+  sync();
+  if (core) {
+    show('etykieta'); initDownloads();
+    window.__swieta = { S: S, core: core, font: font, build: build, cur: function () { return cur; }, show: show };
+  }
+})();
+</script>

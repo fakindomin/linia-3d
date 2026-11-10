@@ -15,8 +15,9 @@ python3 build_std_lowpoly.py      # 19 plików lp_*.stl (kilka sekund)
 python3 renifer_kregiel.py        # renifer „kręgiel”: całość, korpus z gniazdami, poroże wymienne + verify_set (ok. 30 s)
 python3 choinka_miska.py          # miska-choinka wg oryginału, gładka, krawędzie zaokrąglone: 100% (103 × 140 × 21 mm) i 80% (82 × 112 × 17 mm); `--scale S` = własna skala (ok. 5 min)
 python3 foremki_piernik.py        # 5 foremek do pierników: choinka, renifer, bałwan, piernikowy ludzik, gwiazdka (kilka sekund)
-python3 gwiazda_choinkowa.py      # gwiazda na czubek choinki z tuleją; opcjonalnie średnica czubka w mm, np. `python3 gwiazda_choinkowa.py 14` (ok. 30 s)
-python3 zawieszki.py              # 5 zawieszek na prezenty (DLA:/OD:); z imionami: `python3 zawieszki.py Ania Tomek` (kilka sekund)
+python3 czubek_choinkowy.py       # wydłużony czubek choinkowy (tuleja + kula + iglica, 200 mm); opcje `--top 14 --h 200 --bulb 62` (ok. 10 s)
+python3 etykieta.py Ania Tomek    # poziome etykiety „Dla” + imię; `--cap 12` = wyższe litery (kilka sekund)
+python3 artifact/build_swieta.py # składa artefakt „Świąteczne dodatki” (etykieta, czubek, foremki; STL w przeglądarce); testy: `node artifact/test_swieta.js`, `python3 artifact/test_swieta.py`, `python3 artifact/test_swieta_ui.py`
 ./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
 python3 verify_all.py             # 217 kontroli standardu na gotowych plikach out/*.stl
 python3 verify_print.py out/      # szczelność i poprawność druku każdego STL (dziury, zdegenerowane, samoprzecięcia, ścianki; ok. 2 min)
@@ -49,9 +50,10 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `jajko_renifer.py` | jajko niespodzianka **renifer**: miseczka + czapka z zamkiem nr 3 (luz 0,20 mm), poroże 3-poziomowe i uszy-liście z dużego modelu przytopione (ucho 1 mm przed porożem, uszy jak w `renifer_kregiel.stl` od Dominika: 21°, 16 × 10 mm), 127,8 mm, 65 g, bez podpór |
 | `nawisy.py` | pod druk bez podpór: `carve` (od dołu: każda warstwa wystaje najwyżej o stały skos, nic nie wisi w powietrzu, brzuch = namiot z nóg, spód pyska rośnie ku nosowi) i `slicer_overhang` (miara jak w Bambu: warstwa 0,2, progi 25–40°, prawdziwe wyspy) |
 | `choinka_miska.py` | miska-choinka wg „Plätzchen-Schalen”: obrys oryginału w skali 1,0 i 0,8 z czubkiem 60° (6 szt. styka się czubkami bez nakładania), wariant gładki ze wszystkimi krawędziami zaokrąglonymi (plan, brzeg, dno); parametry w nagłówku (promienie, ścianka, skos) |
-| `foremki_piernik.py` | 5 foremek do pierników (`foremka_{choinka,renifer,balwan,ludzik,gwiazdka}.stl`): ścianka 1,2 mm, kołnierz do dociskania, ostrze 0,45 mm, druk kołnierzem do stołu bez podpór; obrysy 2D (`shape_*`) używa też `zawieszki.py` |
-| `gwiazda_choinkowa.py` | gwiazda na czubek prawdziwej choinki: pięcioramienna, żebrowana, 77 × 25 × 73 mm, tuleja na czubek `TOP_D` (domyślnie 18 mm), druk stojący bez podpór |
-| `zawieszki.py` | zawieszki na prezenty (prostokąt, bombka, choinka, gwiazdka, renifer): płytka 2 mm, ramka i napis „DLA:/OD:” lub podane imiona, otwór Ø 4,2 mm, druk na płasko |
+| `foremki_piernik.py` | 5 foremek do pierników (`foremka_{choinka,renifer,balwan,ludzik,gwiazdka}.stl`): ścianka 1,2 mm, kołnierz do dociskania, ostrze 0,45 mm, druk kołnierzem do stołu bez podpór; obrysy 2D (`shape_*`) trafiają do artefaktu przez `--json`; kołnierz 5 × 2 mm jest stały w modelu (w artefakcie regulowany) |
+| `czubek_choinkowy.py` | wydłużony czubek choinkowy (jak szklany: tuleja, kula, szyjka, iglica), żebrowany, bez podpór: 200 × 64 mm, tuleja na czubek `--top` (domyślnie 18 mm), ok. 50 g PETG |
+| `etykieta.py` | pozioma etykieta na prezent: „Dla” + imię (Poppins Bold, polskie znaki), szerokość dopasowana do imienia, otwór Ø 4,2 mm, płytka 2 mm + napis 0,8 mm, druk na płasko; ten sam algorytm w artefakcie (`artifact/swieta_core.js`) |
+| `artifact/swieta.src.html` | artefakt „Świąteczne dodatki”: wpisujesz imię / ustawiasz rozmiar i pobierasz gotowy STL (w ZIP); geometria w `swieta_core.js`, zgodna z Pythonem co do objętości |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |
 | `meshclean.py`, `clean_stl.py` | usuwanie mikro-trójkątów bez otwierania siatki (wpięte w `lib.save`); `clean_stl.py` czyści istniejące pliki |

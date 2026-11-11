@@ -37,9 +37,10 @@ for (const [n, cap] of [['Ania', 11], ['Łukasz', 11], ['Babcia Ela', 11], ['Jan
 for (const k of ['choinka', 'renifer', 'balwan', 'ludzik', 'gwiazdka']) emit('foremka_' + k, core.buildCutter(outl[k], {}));
 emit('foremka_renifer_FL8x3_s1.2', core.buildCutter(outl.renifer, { FL_W: 8, FL_T: 3, scale: 1.2 }));
 console.log('etykiety + foremki', Date.now() - t0, 'ms'); t0 = Date.now();
-emit('czubek_18_200_62', core.buildTopper({}));
-emit('czubek_14_160_54', core.buildTopper({ top: 14, h: 160, bulb: 54 }));
-emit('czubek_26_230_80', core.buildTopper({ top: 26, h: 230, bulb: 80 }));
+emit('czubek_18_240_62_62', core.buildTopper({}));
+emit('czubek_14_200_54_50', core.buildTopper({ top: 14, h: 200, bulb: 54, sleeve: 50 }));
+emit('czubek_26_260_80_70', core.buildTopper({ top: 26, h: 260, bulb: 80, sleeve: 70 }));
+emit('czubek_10_180_40_30', core.buildTopper({ top: 10, h: 180, bulb: 40, sleeve: 30 }));
 console.log('czubki', Date.now() - t0, 'ms');
 // ZIP: poprawnosc kontrolna (python -m zipfile)
 fs.writeFileSync(path.join(outDir, '_test.zip'), Buffer.from(core.zipStore('etykieta_Ania.stl', core.toStl(core.buildLabel(font, 'Ania', 11).mesh))));

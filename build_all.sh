@@ -36,7 +36,7 @@ python3 jelen.py                    # jelen_stojacy.stl (50 mm, gladki): kontrol
 python3 choinka_miska.py            # choinka_miska_100/80 (gladka, krawedzie zaokraglone): kontrola wymiarow, scianek, gladkosci i miejsca na stole (ok. 5 min)
 python3 foremki_piernik.py          # foremka_{choinka,renifer,balwan,ludzik,gwiazdka}.stl (+ foremki_piernik.png)
 python3 foremki_piernik.py --json     # artifact/swieta_outlines.json (obrysy foremek dla artefaktu)
-python3 czubek_choinkowy.py             # czubek_choinkowy.stl (wydluzony czubek: tuleja + kula + iglica; opcje --top --h --bulb)
+python3 czubek_choinkowy.py             # czubek_choinkowy.stl (dluga tuleja, pusta kula otwarta od dolu, iglica; opcje --top --sleeve --h --bulb)
 python3 etykieta.py Ania Tomek          # etykieta_<imie>.stl (poziomo: "Dla" + imie, szerokosc dopasowana)
 python3 build_test.py               # test_czop, test_gniazdo_blok (probka pasowania na drukarke)
 python3 build_std_ribbed_parts.py   # STANDARD v1.0: czesci zebrowane przyciete do koperty (nadpisuje wersje powyzej)

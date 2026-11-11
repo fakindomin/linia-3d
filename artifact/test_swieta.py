@@ -45,7 +45,7 @@ FP.FL_W, FP.FL_T = 8.0, 3.0
 S = affinity.scale(FP.dough("renifer"), 1.2, 1.2, origin=(0, 0))
 cmp("foremka_renifer_FL8x3_s1.2", FP.cutter(S), 0.006, None)
 FP.FL_W, FP.FL_T = 5.0, 2.0
-for key, args in (("czubek_18_200_62", (18, 200, 62)), ("czubek_14_160_54", (14, 160, 54)), ("czubek_26_230_80", (26, 230, 80))):
+for key, args in (("czubek_18_240_62_62", (18, 240, 62, 62)), ("czubek_14_200_54_50", (14, 200, 54, 50)), ("czubek_26_260_80_70", (26, 260, 80, 70)), ("czubek_10_180_40_30", (10, 180, 40, 30))):
     m, g, M = CZ.build(*args)
     cmp(key, m, 0.003, m.extents, 0.05)
 print("ZGODNE" if not bad else f"ROZBIEZNOSCI: {bad}")

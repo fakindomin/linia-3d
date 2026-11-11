@@ -112,8 +112,13 @@
       <p class="hint">Zmierz suwmiarką miejsce, na które czubek ma wejść. Wnęka ma 0,6 mm luzu.</p>
     </label>
     <label class="field">
+      <span class="lab">Długość tulei (dolny element) <output id="sleeve-o"></output></span>
+      <input type="range" id="sleeve" min="30" max="80" step="2" value="62">
+      <p class="hint">Tuleja trzyma czubek na choince. Wnętrze kuli nad nią jest puste, więc czubek choinki wchodzi głębiej, aż do sufitu wnęki (głębokość w tabelce niżej).</p>
+    </label>
+    <label class="field">
       <span class="lab">Wysokość całkowita <output id="h-o"></output></span>
-      <input type="range" id="h" min="120" max="240" step="5" value="200">
+      <input type="range" id="h" min="120" max="250" step="5" value="240">
     </label>
     <label class="field">
       <span class="lab">Średnica kuli <output id="bulb-o"></output></span>
@@ -410,18 +415,18 @@
   }
 
   // ------------------------------------------------------------------------------------------ CZUBEK (czubek_choinkowy.py)
-  const TP = { CLEAR: 0.3, WALL_T: 2.7, DEPTH: 26.0, CONE: 1.3, CONE_OUT: 1.15, R_FLAT: 5.0, BULB_FLAT: 0.85, NECK: 0.21, SPIRE_BASE: 0.44, SPIRE_P: 2.2, R_TIP: 1.6, L_NECK: 2.0, K_NECK: 2.5, K_SHOULDER: 5.0, EPS: 0.01, SEG_MAX: 3.0, SEG_TRANS: 0.6, RIB_AMP: 0.8, RIB_PITCH: 3.4, DEFAULTS: { top: 18, h: 200, bulb: 62 } };
+  const TP = { CLEAR: 0.3, WALL_T: 2.7, SLEEVE: 62.0, CAP: 3.5, CONE: 1.3, CONE_OUT: 1.15, R_FLAT: 5.0, BULB_FLAT: 0.85, NECK: 0.21, SPIRE_BASE: 0.44, SPIRE_P: 2.2, R_TIP: 1.6, L_NECK: 2.0, K_NECK: 2.5, K_SHOULDER: 5.0, EPS: 0.01, SEG_MAX: 3.0, SEG_TRANS: 0.6, RIB_AMP: 0.8, RIB_PITCH: 3.4, DEFAULTS: { top: 18, h: 240, bulb: 62, sleeve: 62 } };
   const smax = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.max(a, b) + h * h * k * 0.25; };
   const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
   const sstep = (z, z0, z1) => { const t = Math.min(Math.max((z - z0) / (z1 - z0), 0), 1); return t * t * (3 - 2 * t); };
   const rib = (N, th) => { const c = Math.cos(N * th); return Math.sign(c) * Math.pow(Math.abs(c), 0.8); };
   const ribAmp = (r) => TP.RIB_AMP * Math.min(Math.max((r - 4) / 6, 0), 1);
 
-  function topperGeo(top, h, bulb, check) {
+  function topperGeo(top, h, bulb, sleeve, check) {
     if (check === undefined) check = true;
     const g = { top, H: h, a: bulb / 2 };
     g.b = TP.BULB_FLAT * g.a;
-    g.r_h = top / 2 + TP.CLEAR; g.r_s = g.r_h + TP.WALL_T; g.Z0 = TP.DEPTH - 4;
+    g.r_h = top / 2 + TP.CLEAR; g.r_s = g.r_h + TP.WALL_T; g.Z0 = sleeve;
     const fa = g.a / g.b; g.phi_j = Math.atan(fa / TP.CONE_OUT);
     g.r_j = g.a * Math.sin(g.phi_j);
     if (check && !(g.r_j - g.r_s > 1.0)) throw new Error('Kula za mała względem tulei');
@@ -436,7 +441,7 @@
     g.z_t = g.H - TP.R_TIP;
     g.trans = [[g.Z0 + 1.0, g.z_j], [g.z_e + 0.80 * g.b, g.z_e + 0.96 * g.b]];
     g.Ns = [Math.round(2 * Math.PI * g.r_s / TP.RIB_PITCH), Math.round(2 * Math.PI * g.a / TP.RIB_PITCH), Math.round(2 * Math.PI * g.r_b / TP.RIB_PITCH)];
-    g.ceil = TP.DEPTH + (g.r_h - TP.R_FLAT) / TP.CONE;
+    g.ceil = g.z_dome - TP.CAP;
     g.taper = (z) => { const t = (z - g.z_sb) / (g.z_t - g.z_sb); return TP.R_TIP + (g.r_b - TP.R_TIP) * Math.pow(Math.max(1 - t, 0), TP.SPIRE_P); };
     g.R = (z) => {
       const ell = g.a * Math.sqrt(Math.max(1 - ((z - g.z_e) / g.b) ** 2, 0));
@@ -477,10 +482,46 @@
     }
     return out;
   }
+  // wnętrze pustej kuli: zewnętrzny profil przesunięty po normalnej o WALL_T do przecięcia ze stożkiem stropu (jak Geo.inner() w czubek_choinkowy.py)
+  function topperInner(g) {
+    const h = 0.02, n = Math.ceil(g.ceil / h);
+    const R = new Float64Array(n), rho = new Float64Array(n), zeta = new Float64Array(n), f = new Float64Array(n);
+    for (let i = 0; i < n; i++) R[i] = g.R(i * h);
+    for (let i = 0; i < n; i++) {
+      const d = i === 0 ? (R[1] - R[0]) / h : (i === n - 1 ? (R[n - 1] - R[n - 2]) / h : (R[i + 1] - R[i - 1]) / (2 * h));
+      const L = Math.sqrt(1 + d * d);
+      rho[i] = R[i] - TP.WALL_T / L; zeta[i] = i * h + TP.WALL_T * d / L;
+      f[i] = (TP.R_FLAT + TP.CONE * (g.ceil - zeta[i])) - rho[i];
+    }
+    const ie = Math.ceil(g.z_e / h);
+    if (!(f[ie] > 0)) throw new Error('Kula za mała na wnękę');
+    let k = -1; for (let i = ie; i < n; i++) if (f[i] < 0) { k = i; break; }
+    if (k < 0) throw new Error('Strop wnęki nie przecina ścianki kuli');
+    const t = f[k - 1] / (f[k - 1] - f[k]);
+    const P = []; for (let i = 0; i < k; i++) P.push([rho[i], zeta[i]]);
+    P.push([rho[k - 1] + t * (rho[k] - rho[k - 1]), zeta[k - 1] + t * (zeta[k] - zeta[k - 1])]);
+    const m = P.length, keep = new Uint8Array(m); keep[0] = keep[m - 1] = 1;
+    const st = [[0, m - 1]];
+    while (st.length) {
+      const [i, j] = st.pop(); if (j <= i + 1) continue;
+      const dx = P[j][0] - P[i][0], dy = P[j][1] - P[i][1], nn = Math.hypot(dx, dy);
+      let best = -1, bd = -1;
+      for (let q = i + 1; q < j; q++) { const d = Math.abs((P[q][0] - P[i][0]) * dy - (P[q][1] - P[i][1]) * dx) / nn; if (d > bd) { bd = d; best = q; } }
+      if (bd > TP.EPS) { keep[best] = 1; st.push([i, best], [best, j]); }
+    }
+    const K = []; for (let i = 0; i < m; i++) if (keep[i]) K.push(P[i]);
+    const out = [K[0]];
+    for (let q = 1; q < K.length; q++) {
+      const a = K[q - 1], b = K[q], c = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / TP.SEG_MAX);
+      for (let i = 0; i < c; i++) out.push([a[0] + (b[0] - a[0]) * (i + 1) / c, a[1] + (b[1] - a[1]) * (i + 1) / c]);
+    }
+    out[0] = [g.r_h, 0];
+    return out;
+  }
   function buildTopper(opt) {
     opt = Object.assign({}, TP.DEFAULTS, opt || {});
-    const g = topperGeo(opt.top, opt.h, opt.bulb);
-    const zr = topperRings(g), M = 8 * g.Ns[1];
+    const g = topperGeo(opt.top, opt.h, opt.bulb, opt.sleeve);
+    const zr = topperRings(g), ip = topperInner(g), M = 8 * g.Ns[1];
     const cosT = new Float64Array(M), sinT = new Float64Array(M);
     for (let j = 0; j < M; j++) { const th = j * 2 * Math.PI / M; cosT[j] = Math.cos(th); sinT[j] = Math.sin(th); }
     const V = []; let nv = 0;
@@ -496,7 +537,8 @@
     };
     const prof = [ring(g.r_h, 0, false)];
     for (const z of zr) prof.push(ring(g.R(z), z, true));
-    prof.push(ring(0, g.ceil, false), ring(TP.R_FLAT, g.ceil, false), ring(g.r_h, TP.DEPTH, false));
+    prof.push(ring(0, g.ceil, false), ring(TP.R_FLAT, g.ceil, false));
+    for (let i = ip.length - 1; i >= 1; i--) prof.push(ring(ip[i][0], ip[i][1], false));
     const F = [];
     for (let e = 0; e < prof.length; e++) {
       const A = prof[e], B = prof[(e + 1) % prof.length];
@@ -510,13 +552,13 @@
     }
     const mesh = { positions: Float32Array.from(V), indices: Uint32Array.from(F) };
     const info = meshInfo(mesh);
-    info.geo = { r_s: g.r_s, r_h: g.r_h, a: g.a, b: g.b, r_neck: g.r_neck, r_b: g.r_b, z_sb: g.z_sb, ceil: g.ceil, Ns: g.Ns, M };
+    info.geo = { r_s: g.r_s, r_h: g.r_h, a: g.a, b: g.b, r_neck: g.r_neck, r_b: g.r_b, z_sb: g.z_sb, ceil: g.ceil, Ns: g.Ns, M, sleeve: g.Z0, r_in_max: Math.max.apply(null, ip.map((p) => p[0])), z_e: g.z_e, z_dome: g.z_dome };
     return { mesh, info };
   }
-  function topperMin(top, bulb) {       // najmniejsza wysokość czubka dla danej średnicy czubka choinki i kuli; najmniejsza średnica kuli dla tulei
+  function topperMin(top, bulb, sleeve) {       // najmniejsza wysokość czubka dla danej średnicy czubka choinki i kuli; najmniejsza średnica kuli dla tulei
     const r_s = top / 2 + TP.CLEAR + TP.WALL_T, phi = Math.atan((1 / TP.BULB_FLAT) / TP.CONE_OUT);
     const bulbMin = Math.ceil(2 * (r_s + 2) / Math.sin(phi));
-    const g = topperGeo(top, 1000, Math.max(bulb, bulbMin), false);
+    const g = topperGeo(top, 1000, Math.max(bulb, bulbMin), sleeve === undefined ? TP.SLEEVE : sleeve, false);
     return { bulbMin, hMin: Math.ceil(g.z_sb + 41) };
   }
 
@@ -619,18 +661,18 @@
   }
 
   // ---------- stan i modele
-  var S = { tab: 'etykieta', name: '', cap: 11, top: 18, h: 200, bulb: 62, shape: 'choinka', scale: 1, flw: 5, flt: 2 };
+  var S = { tab: 'etykieta', name: '', cap: 11, top: 18, sleeve: 62, h: 240, bulb: 62, shape: 'choinka', scale: 1, flw: 5, flt: 2 };
   try { var saved = JSON.parse(localStorage.getItem('swieta_state') || '{}'); if (typeof saved.name === 'string') S.name = saved.name.slice(0, 26); if (saved.cap) S.cap = +saved.cap; } catch (e) {}
   var cur = null;            // { mesh, info, kind, file, stlName }
   var VIEWS = { etykieta: [[-14, 42], [0, 89], [-30, -50]], czubek: [[28, 14], [0, 0], [60, 60]], foremki: [[24, 36], [0, 89], [24, -50]] };
   var viewIdx = 0;
   var TIPS = {
     etykieta: ['<b>Druk:</b> na płasko, napisem do góry, bez podpór. Płytka 2,0 mm, napis i ramka wypukłe 0,8 mm.', '<b>Dwa kolory:</b> zmień filament na warstwie 2,0 mm, a napis i ramka będą w innym kolorze (na podglądzie ciemniejsze).', '<b>Sznurek:</b> otwór Ø 4,2 mm po lewej stronie.'],
-    czubek: ['<b>Druk:</b> stojąco, tuleją na stole, bez podpór. Jedyny nawis to płaski sufit wnęki Ø 10 mm (mostek).', '<b>Brim:</b> podstawa to pierścień ok. Ø 24 mm, a model jest wysoki. Włącz obwódkę zewnętrzną (brim) ok. 8 mm.', '<b>Dopasowanie:</b> jeśli czubek choinki jest stożkowy, mierz go w miejscu, gdzie tuleja ma się zatrzymać.'],
+    czubek: ['<b>Druk:</b> stojąco, tuleją na stole, bez podpór. Kula jest pusta i otwarta od dołu, a jedyny nawis to płaski sufit wnęki Ø 10 mm (mostek). Przekrój pokaże wnętrze.', '<b>Brim:</b> podstawa to pierścień ok. Ø 24 mm, a model jest wysoki. Włącz obwódkę zewnętrzną (brim) ok. 8 mm.', '<b>Dopasowanie:</b> czubek choinki trzyma się w tulei. Jeśli jest stożkowy, mierz go tam, gdzie tuleja ma się zatrzymać, a dłuższą tuleją zyskasz pewniejsze osadzenie.'],
     foremki: ['<b>Druk:</b> kołnierzem do stołu, ostrzem do góry, bez podpór. Ścianka 1,2 mm (3 ścieżki dyszy 0,4), ostrze zwężone do 0,45 mm.', '<b>Kołnierz:</b> usztywnia foremkę i służy do dociskania kciukiem. Szerszy i grubszy = sztywniejsza foremka.', '<b>Uwaga:</b> wydruk FDM nie jest trwale bezpieczny dla żywności: tylko krótki kontakt z ciastem i mycie ręczne.']
   };
   function slug(s) { return s.toLowerCase().replace(/[ąćęłńóśźż]/g, function (c) { return 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]; }).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'imie'; }
-  function grams(info, infill) { return infill == null ? info.grams : (info.area * 1.0 + infill * (info.volume - info.area * 1.0)) / 1000 * core.PETG; }
+  function grams(info, infill) { if (infill == null) return info.grams; var shell = Math.min(info.volume, info.area * 1.2); return (shell + infill * Math.max(info.volume - shell, 0)) / 1000 * core.PETG; }
   function facts(list) { $('facts').innerHTML = list.map(function (f) { return '<div><dt>' + f[0] + '</dt><dd' + (f[2] ? ' class="warn"' : '') + '>' + f[1] + '</dd></div>'; }).join(''); }
   function legend(items) { $('legend').innerHTML = items.map(function (i) { return '<span><i style="background:' + i[1] + '"></i>' + i[0] + '</span>'; }).join(''); }
   var rgbCss = function (c) { return 'rgb(' + c.map(function (x) { return Math.round(x * 255); }).join(',') + ')'; };
@@ -650,12 +692,12 @@
         cur.ready = cur.ready && fits;
         $('dl').textContent = 'Pobierz STL: Dla ' + (S.name.trim() || '…');
       } else if (kind === 'czubek') {
-        r = core.buildTopper({ top: S.top, h: S.h, bulb: S.bulb });
+        r = core.buildTopper({ top: S.top, h: S.h, bulb: S.bulb, sleeve: S.sleeve });
         var g = r.info.geo;
-        cur = { mesh: r.mesh, info: r.info, kind: kind, stl: 'czubek_choinkowy_top' + PL(S.top, S.top % 1 ? 1 : 0).replace(',', '_') + '_h' + S.h + '_kula' + S.bulb + '.stl', ready: true };
+        cur = { mesh: r.mesh, info: r.info, kind: kind, stl: 'czubek_choinkowy_top' + PL(S.top, S.top % 1 ? 1 : 0).replace(',', '_') + '_h' + S.h + '_kula' + S.bulb + '_tuleja' + S.sleeve + '.stl', ready: true };
         cur.zip = cur.stl.replace(/\.stl$/, '.zip');
         viewer && viewer.setMesh(geoSmooth(r.mesh, COL.ivory), opts);
-        facts([['Wysokość', PL(r.info.extents[2], 0) + ' mm'], ['Kula', 'Ø ' + PL(2 * g.a, 0) + ' × ' + PL(2 * g.b, 0) + ' mm'], ['Tuleja', 'Ø ' + PL(2 * g.r_s, 1) + ' mm'], ['Wnęka na czubek', 'Ø ' + PL(2 * g.r_h, 1) + ' mm, głęb. ' + PL(g.ceil, 0) + ' mm'], ['Żeber', PL(g.Ns[1]) + ' na kuli'], ['Masa PETG', 'ok. ' + PL(grams(r.info, 0.15), 0) + ' g (15% wypełnienia)']]);
+        facts([['Wysokość', PL(r.info.extents[2], 0) + ' mm'], ['Kula', 'Ø ' + PL(2 * g.a, 0) + ' × ' + PL(2 * g.b, 0) + ' mm'], ['Tuleja', 'Ø ' + PL(2 * g.r_s, 1) + ' × ' + PL(g.sleeve, 0) + ' mm'], ['Otwór od dołu', 'Ø ' + PL(2 * g.r_h, 1) + ' mm'], ['Czubek wchodzi na', PL(g.ceil, 0) + ' mm od dołu'], ['Wnętrze kuli', 'puste, do Ø ' + PL(2 * g.r_in_max, 1) + ' mm'], ['Masa PETG', 'ok. ' + PL(grams(r.info, 0.15), 0) + ' g (15% wypełnienia)'], ['Brim w slicerze', 'ok. 8 mm']]);
         legend([]);
       } else {
         var o = OUTLINES[S.shape];
@@ -692,27 +734,27 @@
     build(true);
   }
   function sync() {
-    $('cap-o').textContent = PL(S.cap, 1) + ' mm'; $('top-o').textContent = PL(S.top, S.top % 1 ? 1 : 0) + ' mm'; $('h-o').textContent = PL(S.h, 0) + ' mm'; $('bulb-o').textContent = PL(S.bulb, 0) + ' mm';
+    $('cap-o').textContent = PL(S.cap, 1) + ' mm'; $('top-o').textContent = PL(S.top, S.top % 1 ? 1 : 0) + ' mm'; $('sleeve-o').textContent = PL(S.sleeve, 0) + ' mm'; $('h-o').textContent = PL(S.h, 0) + ' mm'; $('bulb-o').textContent = PL(S.bulb, 0) + ' mm';
     $('scale-o').textContent = PL(S.scale * 100, 0) + '% · ' + PL(OUTLINES[S.shape].size * S.scale / 10, 1) + ' cm'; $('flw-o').textContent = PL(S.flw, 1) + ' mm'; $('flt-o').textContent = PL(S.flt, 1) + ' mm';
     try { localStorage.setItem('swieta_state', JSON.stringify({ name: S.name, cap: S.cap })); } catch (e) {}
   }
   function clampTopper() {
-    var m = core.topperMin(S.top, S.bulb), bm = $('bulb'), hm = $('h');
-    bm.min = String(Math.max(40, m.bulbMin)); if (S.bulb < +bm.min) { S.bulb = +bm.min; bm.value = String(S.bulb); m = core.topperMin(S.top, S.bulb); }
-    hm.min = String(Math.max(120, Math.ceil(m.hMin / 5) * 5)); if (S.h < +hm.min) { S.h = +hm.min; hm.value = String(S.h); }
+    var m = core.topperMin(S.top, S.bulb, S.sleeve), bm = $('bulb'), hm = $('h');
+    bm.min = String(Math.max(40, m.bulbMin)); if (S.bulb < +bm.min) { S.bulb = +bm.min; bm.value = String(S.bulb); m = core.topperMin(S.top, S.bulb, S.sleeve); }
+    hm.min = String(Math.min(250, Math.max(120, Math.ceil(m.hMin / 5) * 5))); if (S.h < +hm.min) { S.h = +hm.min; hm.value = String(S.h); }
   }
   function bind() {
     $('tab-etykieta').onclick = function () { show('etykieta'); }; $('tab-czubek').onclick = function () { show('czubek'); }; $('tab-foremki').onclick = function () { show('foremki'); };
     $('name').value = S.name; $('cap').value = String(S.cap);
     $('name').addEventListener('input', function () { S.name = this.value; sync(); schedule(120); });
     var bindRange = function (id, key, after) { $(id).addEventListener('input', function () { S[key] = parseFloat(this.value); if (after) after(); sync(); schedule(140); }); };
-    bindRange('cap', 'cap'); bindRange('top', 'top', function () { if (core) clampTopper(); }); bindRange('h', 'h'); bindRange('bulb', 'bulb', function () { if (core) clampTopper(); });
+    bindRange('cap', 'cap'); bindRange('top', 'top', function () { if (core) clampTopper(); }); bindRange('sleeve', 'sleeve', function () { if (core) clampTopper(); }); bindRange('h', 'h'); bindRange('bulb', 'bulb', function () { if (core) clampTopper(); });
     bindRange('scale', 'scale'); bindRange('flw', 'flw'); bindRange('flt', 'flt');
     if (OUTLINES) {
       $('shapes').innerHTML = Object.keys(OUTLINES).filter(function (k) { return k[0] !== '_'; }).map(function (k) { return '<button data-k="' + k + '" aria-pressed="' + (k === S.shape) + '">' + OUTLINES[k].name + '</button>'; }).join('');
       $('shapes').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.shape = b.dataset.k; Array.prototype.forEach.call($('shapes').children, function (c) { c.setAttribute('aria-pressed', String(c === b)); }); sync(); schedule(10); });
     }
-    $('chip-sec').addEventListener('click', function () { var on = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', String(on)); if (viewer) viewer.setSection(on); });
+    $('chip-sec').addEventListener('click', function () { var on = this.getAttribute('aria-pressed') !== 'true'; this.setAttribute('aria-pressed', String(on)); if (viewer) { viewer.setSection(on); var Lv = VIEWS[S.tab], sv = S.tab === 'czubek' ? [90, 6] : [62, 28], tv = on ? sv : Lv[viewIdx]; viewer.setView(tv[0], tv[1]); } });
     $('chip-view').addEventListener('click', function () { var L = VIEWS[S.tab]; viewIdx = (viewIdx + 1) % L.length; if (viewer) viewer.setView(L[viewIdx][0], L[viewIdx][1]); });
     $('dl').addEventListener('click', download);
   }

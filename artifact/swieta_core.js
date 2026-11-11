@@ -252,18 +252,18 @@
   }
 
   // ------------------------------------------------------------------------------------------ CZUBEK (czubek_choinkowy.py)
-  const TP = { CLEAR: 0.3, WALL_T: 2.7, DEPTH: 26.0, CONE: 1.3, CONE_OUT: 1.15, R_FLAT: 5.0, BULB_FLAT: 0.85, NECK: 0.21, SPIRE_BASE: 0.44, SPIRE_P: 2.2, R_TIP: 1.6, L_NECK: 2.0, K_NECK: 2.5, K_SHOULDER: 5.0, EPS: 0.01, SEG_MAX: 3.0, SEG_TRANS: 0.6, RIB_AMP: 0.8, RIB_PITCH: 3.4, DEFAULTS: { top: 18, h: 200, bulb: 62 } };
+  const TP = { CLEAR: 0.3, WALL_T: 2.7, SLEEVE: 62.0, CAP: 3.5, CONE: 1.3, CONE_OUT: 1.15, R_FLAT: 5.0, BULB_FLAT: 0.85, NECK: 0.21, SPIRE_BASE: 0.44, SPIRE_P: 2.2, R_TIP: 1.6, L_NECK: 2.0, K_NECK: 2.5, K_SHOULDER: 5.0, EPS: 0.01, SEG_MAX: 3.0, SEG_TRANS: 0.6, RIB_AMP: 0.8, RIB_PITCH: 3.4, DEFAULTS: { top: 18, h: 240, bulb: 62, sleeve: 62 } };
   const smax = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.max(a, b) + h * h * k * 0.25; };
   const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
   const sstep = (z, z0, z1) => { const t = Math.min(Math.max((z - z0) / (z1 - z0), 0), 1); return t * t * (3 - 2 * t); };
   const rib = (N, th) => { const c = Math.cos(N * th); return Math.sign(c) * Math.pow(Math.abs(c), 0.8); };
   const ribAmp = (r) => TP.RIB_AMP * Math.min(Math.max((r - 4) / 6, 0), 1);
 
-  function topperGeo(top, h, bulb, check) {
+  function topperGeo(top, h, bulb, sleeve, check) {
     if (check === undefined) check = true;
     const g = { top, H: h, a: bulb / 2 };
     g.b = TP.BULB_FLAT * g.a;
-    g.r_h = top / 2 + TP.CLEAR; g.r_s = g.r_h + TP.WALL_T; g.Z0 = TP.DEPTH - 4;
+    g.r_h = top / 2 + TP.CLEAR; g.r_s = g.r_h + TP.WALL_T; g.Z0 = sleeve;
     const fa = g.a / g.b; g.phi_j = Math.atan(fa / TP.CONE_OUT);
     g.r_j = g.a * Math.sin(g.phi_j);
     if (check && !(g.r_j - g.r_s > 1.0)) throw new Error('Kula za mała względem tulei');
@@ -278,7 +278,7 @@
     g.z_t = g.H - TP.R_TIP;
     g.trans = [[g.Z0 + 1.0, g.z_j], [g.z_e + 0.80 * g.b, g.z_e + 0.96 * g.b]];
     g.Ns = [Math.round(2 * Math.PI * g.r_s / TP.RIB_PITCH), Math.round(2 * Math.PI * g.a / TP.RIB_PITCH), Math.round(2 * Math.PI * g.r_b / TP.RIB_PITCH)];
-    g.ceil = TP.DEPTH + (g.r_h - TP.R_FLAT) / TP.CONE;
+    g.ceil = g.z_dome - TP.CAP;
     g.taper = (z) => { const t = (z - g.z_sb) / (g.z_t - g.z_sb); return TP.R_TIP + (g.r_b - TP.R_TIP) * Math.pow(Math.max(1 - t, 0), TP.SPIRE_P); };
     g.R = (z) => {
       const ell = g.a * Math.sqrt(Math.max(1 - ((z - g.z_e) / g.b) ** 2, 0));
@@ -319,10 +319,46 @@
     }
     return out;
   }
+  // wnętrze pustej kuli: zewnętrzny profil przesunięty po normalnej o WALL_T do przecięcia ze stożkiem stropu (jak Geo.inner() w czubek_choinkowy.py)
+  function topperInner(g) {
+    const h = 0.02, n = Math.ceil(g.ceil / h);
+    const R = new Float64Array(n), rho = new Float64Array(n), zeta = new Float64Array(n), f = new Float64Array(n);
+    for (let i = 0; i < n; i++) R[i] = g.R(i * h);
+    for (let i = 0; i < n; i++) {
+      const d = i === 0 ? (R[1] - R[0]) / h : (i === n - 1 ? (R[n - 1] - R[n - 2]) / h : (R[i + 1] - R[i - 1]) / (2 * h));
+      const L = Math.sqrt(1 + d * d);
+      rho[i] = R[i] - TP.WALL_T / L; zeta[i] = i * h + TP.WALL_T * d / L;
+      f[i] = (TP.R_FLAT + TP.CONE * (g.ceil - zeta[i])) - rho[i];
+    }
+    const ie = Math.ceil(g.z_e / h);
+    if (!(f[ie] > 0)) throw new Error('Kula za mała na wnękę');
+    let k = -1; for (let i = ie; i < n; i++) if (f[i] < 0) { k = i; break; }
+    if (k < 0) throw new Error('Strop wnęki nie przecina ścianki kuli');
+    const t = f[k - 1] / (f[k - 1] - f[k]);
+    const P = []; for (let i = 0; i < k; i++) P.push([rho[i], zeta[i]]);
+    P.push([rho[k - 1] + t * (rho[k] - rho[k - 1]), zeta[k - 1] + t * (zeta[k] - zeta[k - 1])]);
+    const m = P.length, keep = new Uint8Array(m); keep[0] = keep[m - 1] = 1;
+    const st = [[0, m - 1]];
+    while (st.length) {
+      const [i, j] = st.pop(); if (j <= i + 1) continue;
+      const dx = P[j][0] - P[i][0], dy = P[j][1] - P[i][1], nn = Math.hypot(dx, dy);
+      let best = -1, bd = -1;
+      for (let q = i + 1; q < j; q++) { const d = Math.abs((P[q][0] - P[i][0]) * dy - (P[q][1] - P[i][1]) * dx) / nn; if (d > bd) { bd = d; best = q; } }
+      if (bd > TP.EPS) { keep[best] = 1; st.push([i, best], [best, j]); }
+    }
+    const K = []; for (let i = 0; i < m; i++) if (keep[i]) K.push(P[i]);
+    const out = [K[0]];
+    for (let q = 1; q < K.length; q++) {
+      const a = K[q - 1], b = K[q], c = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / TP.SEG_MAX);
+      for (let i = 0; i < c; i++) out.push([a[0] + (b[0] - a[0]) * (i + 1) / c, a[1] + (b[1] - a[1]) * (i + 1) / c]);
+    }
+    out[0] = [g.r_h, 0];
+    return out;
+  }
   function buildTopper(opt) {
     opt = Object.assign({}, TP.DEFAULTS, opt || {});
-    const g = topperGeo(opt.top, opt.h, opt.bulb);
-    const zr = topperRings(g), M = 8 * g.Ns[1];
+    const g = topperGeo(opt.top, opt.h, opt.bulb, opt.sleeve);
+    const zr = topperRings(g), ip = topperInner(g), M = 8 * g.Ns[1];
     const cosT = new Float64Array(M), sinT = new Float64Array(M);
     for (let j = 0; j < M; j++) { const th = j * 2 * Math.PI / M; cosT[j] = Math.cos(th); sinT[j] = Math.sin(th); }
     const V = []; let nv = 0;
@@ -338,7 +374,8 @@
     };
     const prof = [ring(g.r_h, 0, false)];
     for (const z of zr) prof.push(ring(g.R(z), z, true));
-    prof.push(ring(0, g.ceil, false), ring(TP.R_FLAT, g.ceil, false), ring(g.r_h, TP.DEPTH, false));
+    prof.push(ring(0, g.ceil, false), ring(TP.R_FLAT, g.ceil, false));
+    for (let i = ip.length - 1; i >= 1; i--) prof.push(ring(ip[i][0], ip[i][1], false));
     const F = [];
     for (let e = 0; e < prof.length; e++) {
       const A = prof[e], B = prof[(e + 1) % prof.length];
@@ -352,13 +389,13 @@
     }
     const mesh = { positions: Float32Array.from(V), indices: Uint32Array.from(F) };
     const info = meshInfo(mesh);
-    info.geo = { r_s: g.r_s, r_h: g.r_h, a: g.a, b: g.b, r_neck: g.r_neck, r_b: g.r_b, z_sb: g.z_sb, ceil: g.ceil, Ns: g.Ns, M };
+    info.geo = { r_s: g.r_s, r_h: g.r_h, a: g.a, b: g.b, r_neck: g.r_neck, r_b: g.r_b, z_sb: g.z_sb, ceil: g.ceil, Ns: g.Ns, M, sleeve: g.Z0, r_in_max: Math.max.apply(null, ip.map((p) => p[0])), z_e: g.z_e, z_dome: g.z_dome };
     return { mesh, info };
   }
-  function topperMin(top, bulb) {       // najmniejsza wysokość czubka dla danej średnicy czubka choinki i kuli; najmniejsza średnica kuli dla tulei
+  function topperMin(top, bulb, sleeve) {       // najmniejsza wysokość czubka dla danej średnicy czubka choinki i kuli; najmniejsza średnica kuli dla tulei
     const r_s = top / 2 + TP.CLEAR + TP.WALL_T, phi = Math.atan((1 / TP.BULB_FLAT) / TP.CONE_OUT);
     const bulbMin = Math.ceil(2 * (r_s + 2) / Math.sin(phi));
-    const g = topperGeo(top, 1000, Math.max(bulb, bulbMin), false);
+    const g = topperGeo(top, 1000, Math.max(bulb, bulbMin), sleeve === undefined ? TP.SLEEVE : sleeve, false);
     return { bulbMin, hMin: Math.ceil(g.z_sb + 41) };
   }
 

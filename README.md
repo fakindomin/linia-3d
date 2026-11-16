@@ -17,7 +17,7 @@ python3 choinka_miska.py          # miska-choinka wg oryginału, gładka, krawę
 python3 foremki_piernik.py        # 5 foremek do pierników: choinka, renifer, bałwan, piernikowy ludzik, gwiazdka (kilka sekund)
 python3 czubek_choinkowy.py       # wydłużony czubek choinkowy: długa tuleja, pusta kula otwarta od dołu, iglica (240 mm); opcje `--top 14 --sleeve 62 --h 240 --bulb 62` (ok. 10 s)
 python3 etykieta.py Ania Tomek    # poziome etykiety „Dla” + imię; `--cap 12` = wyższe litery (kilka sekund)
-python3 taca.py                    # taca żebrowana 240 × 75 × 20 mm (owal, ścianka z żebrami, gładkie wnętrze) na 4 renifery kręgle i drobiazgi; `--wid`, `--len`, `--h`, `--exp` (ok. 10 s)
+python3 taca.py                    # taca żebrowana 240 × 75 × 20 mm (prostokąt z zaokrąglonymi narożnikami, ścianka z żebrami, gładkie wnętrze) na 4 renifery kręgle i drobiazgi; `--wid`, `--len`, `--h`, `--rad` (ok. 10 s)
 python3 artifact/build_swieta.py # składa artefakt „Świąteczne dodatki” (etykieta, czubek, foremki; STL w przeglądarce); testy: `node artifact/test_swieta.js`, `python3 artifact/test_swieta.py`, `python3 artifact/test_swieta_ui.py`
 ./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
 python3 verify_all.py             # 217 kontroli standardu na gotowych plikach out/*.stl
@@ -54,7 +54,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `foremki_piernik.py` | 5 foremek do pierników (`foremka_{choinka,renifer,balwan,ludzik,gwiazdka}.stl`): ścianka 1,2 mm, kołnierz do dociskania, ostrze 0,45 mm, druk kołnierzem do stołu bez podpór; obrysy 2D (`shape_*`) trafiają do artefaktu przez `--json`; kołnierz 5 × 2 mm jest stały w modelu (w artefakcie regulowany) |
 | `czubek_choinkowy.py` | wydłużony czubek choinkowy (jak szklany): tuleja 62 mm, kula PUSTA i otwarta od dołu (czubek choinki wchodzi na ok. 112 mm), szyjka, iglica; żebrowany, bez podpór: 240 × 64 mm, tuleja na czubek `--top` (domyślnie 18 mm), ok. 60 g PETG |
 | `etykieta.py` | pozioma etykieta na prezent: „Dla” + imię (Poppins Bold, polskie znaki), szerokość dopasowana do imienia, otwór Ø 4,2 mm, płytka 2 mm + napis 0,8 mm, druk na płasko; ten sam algorytm w artefakcie (`artifact/swieta_core.js`) |
-| `taca.py` | żebrowana taca owalna 240 × 75 × 20 mm (superelipsa, pionowe żebra po zewnętrznej ściance, gładkie wnętrze, dno 2,4 mm): 4 renifery kręgle w rzędzie z luzem 3,6 mm na rancie, 3 szt. na stole P1S, druk bez podpór; podgląd z góry i 3D |
+| `taca.py` | żebrowana taca prostokątna 240 × 75 × 20 mm z zaokrąglonymi narożnikami (R 15, pionowe żebra po zewnętrznej ściance, gładkie wnętrze, dno 2,4 mm): 4 renifery kręgle w rzędzie z luzem 8,4 mm na rancie, 3 szt. na stole P1S, druk bez podpór; podgląd z góry i 3D |
 | `artifact/swieta.src.html` | artefakt „Świąteczne dodatki”: wpisujesz imię / ustawiasz rozmiar i pobierasz gotowy STL (w ZIP); geometria w `swieta_core.js`, zgodna z Pythonem co do objętości |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |

@@ -1,10 +1,10 @@
-"""TACA: żebrowana taca owalna na renifery żebrowane i drobne elementy (240 x 75 x 20 mm, 3 szt. na stole P1S 256 x 256).
-Obrys = superelipsa (wykładnik EXP: 2 = elipsa, 4+ = prawie prostokąt z zaokrąglonymi narożnikami); zewnętrzna ścianka ma pionowe żebra linii
-(amplituda ±RIB_AMP = 0,8 mm, rozstaw ok. 3,4 mm wzdłuż obwodu, grzbiet dokładnie na końcach osi, więc wymiary 240 x 75 są mierzone po grzbietach),
+"""TACA: żebrowana taca prostokątna z zaokrąglonymi narożnikami na renifery żebrowane i drobne elementy (240 x 75 x 20 mm, 3 szt. na stole P1S 256 x 256).
+Obrys = prostokąt L x W z narożnikami o promieniu RAD (liczonym po grzbietach żeber; RAD = W/2 daje kształt „tabletki”); zewnętrzna ścianka ma pionowe żebra linii
+(amplituda ±RIB_AMP = 0,8 mm, rozstaw ok. 3,4 mm wzdłuż obwodu, grzbiet dokładnie w środkach czterech boków, więc wymiary 240 x 75 są mierzone po grzbietach),
 wnętrze GŁADKIE (łatwo odkurzyć i wytrzeć, renifery stoją prosto). Całość to wyciągnięcie obrysu w pionie: nic nie wisi, bez podpór.
 Druk: dnem do stołu, 3 szt. obok siebie (Y: 3 x 75 + 2 x 8 = 241 mm), PETG; dla pewnej przyczepności brim 5 mm (opcjonalnie).
   python3 taca.py                       -> out/taca.stl + out/taca.png (podgląd z reniferami dla skali)
-  python3 taca.py --wid 57 --h 30       inne wymiary; --exp 3.6 pełniejsze końce; --name taca_57
+  python3 taca.py --wid 57 --h 30       inne wymiary; --rad 30 większe zaokrąglenie narożników; --name taca_57
 Kontrole (kod wyjścia 1 przy błędzie): wymiary po grzbietach, szczelność, 1 składowa, nawis > 55° = 0, ścianka w dolinie żebra >= 0,8 mm,
 mieszczą się 4 renifery kręgle (podstawa Ø33, brzuch Ø44 na rancie 20 mm) z luzem >= 0,5 mm i 3 sztuki na stole."""
 import os, sys, math, time, argparse
@@ -20,7 +20,7 @@ from lib import RIB_AMP, RIB_PITCH
 LENGTH, WIDTH, HEIGHT = 240.0, 75.0, 20.0     # wymiary zewnętrzne po grzbietach żeber [mm]
 FLOOR = 2.4                                   # grubość dna [mm]
 WALL = 2.0                                    # ścianka od linii środkowej żeber do wnętrza; w dolinie żebra WALL - RIB_AMP = 1,2 mm
-EXP = 2.5                                     # wykładnik superelipsy (2 = elipsa; wyższy = pełniejsze końce)
+RAD = 15.0                                    # promień narożników obrysu po grzbietach żeber [mm] (maks. połowa mniejszego wymiaru)
 FOOT = ((0.2, 0.30), (0.4, 0.15))             # fazka dolnej krawędzi: (wysokość schodka do [mm], cofnięcie obrysu [mm]); 2 schodki (nic nie wisi)
 K_PTS = 20                                    # punktów na jedno żebro
 PETG = 1.27                                   # g/cm3
@@ -40,25 +40,44 @@ def reindeer_r(z):
 
 
 # ---------------------------------------------------------------------------------------------- obrys
-def superellipse(a, b, n, M=40000):
-    t = np.linspace(0, 2 * np.pi, M, endpoint=False)
-    c, s = np.cos(t), np.sin(t)
-    return np.stack([a * np.sign(c) * np.abs(c) ** (2 / n), b * np.sign(s) * np.abs(s) ** (2 / n)], 1)
+def rounded_rect(a, b, rc, s):
+    """prostokąt o półosiach a x b (linia środkowa żeber) z narożnikami o promieniu rc: punkt i styczna jednostkowa w funkcji drogi s [mm]
+    od środka prawego boku, obieg przeciwny do ruchu wskazówek: bok, łuk, bok, łuk, bok, łuk, bok, łuk, bok"""
+    w, h = a - rc, b - rc
+    q = np.pi / 2 * rc
+    segs = [("L", (a, 0), (0, 1), h), ("A", (w, h), 0.0, q), ("L", (w, b), (-1, 0), 2 * w), ("A", (-w, h), np.pi / 2, q),
+            ("L", (-a, h), (0, -1), 2 * h), ("A", (-w, -h), np.pi, q), ("L", (-w, -b), (1, 0), 2 * w), ("A", (w, -h), 1.5 * np.pi, q), ("L", (a, -h), (0, 1), h)]
+    edges = np.concatenate([[0], np.cumsum([sg[3] for sg in segs])])
+    P = np.zeros((len(s), 2)); T = np.zeros((len(s), 2))
+    for (kind, p0, d, ln), s0, s1 in zip(segs, edges[:-1], edges[1:]):
+        m = (s >= s0) & (s < s1)
+        if not m.any():
+            continue
+        u = s[m] - s0
+        if kind == "L":
+            P[m] = np.array(p0) + np.outer(u, d); T[m] = d
+        else:
+            th = d + u / rc
+            P[m] = np.stack([p0[0] + rc * np.cos(th), p0[1] + rc * np.sin(th)], 1); T[m] = np.stack([-np.sin(th), np.cos(th)], 1)
+    return P, T
 
 
-def ribbed_outline(length, width, n=EXP, amp=RIB_AMP, pitch=RIB_PITCH):
-    """(obrys żebrowany [Nx2], linia środkowa [Mx2], N żeber): linia środkowa = superelipsa o półosiach (L/2 - amp, W/2 - amp);
-    żebra = przesunięcie po normalnej o amp·rib(s), rib = sign(cos)|cos|^0,8 (profil linii), N podzielne przez 4 → grzbiet na końcach obu osi"""
+def corner_radius(length, width, rad, amp=RIB_AMP):
+    """promień łuku linii środkowej: rad po grzbietach minus amplituda, nie więcej niż połowa mniejszej osi i nie mniej niż 1 mm"""
     a, b = length / 2 - amp, width / 2 - amp
-    fine = superellipse(a, b, n)
-    seg = np.linalg.norm(np.roll(fine, -1, 0) - fine, axis=1)
-    s_f = np.concatenate([[0], np.cumsum(seg)]); Ltot = s_f[-1]
+    return float(min(max(min(rad, length / 2, width / 2) - amp, 1.0), a, b))
+
+
+def ribbed_outline(length, width, rad=RAD, amp=RIB_AMP, pitch=RIB_PITCH):
+    """(obrys żebrowany [Nx2], linia środkowa [Mx2], N żeber): linia środkowa = prostokąt o półosiach (L/2 - amp, W/2 - amp) z łukami rc = rad - amp;
+    żebra = przesunięcie po normalnej o amp·rib(s), rib = sign(cos)|cos|^0,8 (profil linii), N podzielne przez 4 → grzbiet w środkach czterech boków"""
+    a, b = length / 2 - amp, width / 2 - amp
+    rc = corner_radius(length, width, rad, amp)
+    Ltot = 4 * (a - rc) + 4 * (b - rc) + 2 * np.pi * rc
     N = 4 * max(1, int(round(Ltot / (4 * pitch))))
     M = N * K_PTS
-    s_t = np.linspace(0, Ltot, M, endpoint=False)
-    closed = np.vstack([fine, fine[:1]])
-    P = np.stack([np.interp(s_t, s_f, closed[:, 0]), np.interp(s_t, s_f, closed[:, 1])], 1)
-    T = np.roll(P, -1, 0) - np.roll(P, 1, 0); T /= np.linalg.norm(T, axis=1, keepdims=True)
+    s_t = np.arange(M) * Ltot / M
+    P, T = rounded_rect(a, b, rc, s_t)
     Nrm = np.stack([T[:, 1], -T[:, 0]], 1)                              # na zewnątrz (obieg przeciwny do ruchu wskazówek)
     th = 2 * np.pi * s_t / Ltot
     c = np.cos(N * th)
@@ -66,8 +85,8 @@ def ribbed_outline(length, width, n=EXP, amp=RIB_AMP, pitch=RIB_PITCH):
     return P + Nrm * off[:, None], P, N
 
 
-def build_outlines(length, width, n=EXP, wall=WALL):
-    out, mid, N = ribbed_outline(length, width, n)
+def build_outlines(length, width, rad=RAD, wall=WALL):
+    out, mid, N = ribbed_outline(length, width, rad)
     S_out = Polygon(out).buffer(0)
     S_in = Polygon(mid).buffer(-wall, join_style=1, quad_segs=16).simplify(0.01)
     return S_out, S_in, Polygon(mid), N
@@ -80,8 +99,8 @@ def prism(poly, z0, z1):
     return m
 
 
-def build(length=LENGTH, width=WIDTH, height=HEIGHT, floor=FLOOR, n=EXP, wall=WALL):
-    S_out, S_in, S_mid, N = build_outlines(length, width, n, wall)
+def build(length=LENGTH, width=WIDTH, height=HEIGHT, floor=FLOOR, rad=RAD, wall=WALL):
+    S_out, S_in, S_mid, N = build_outlines(length, width, rad, wall)
     parts, z_prev = [], 0.0
     for z1, inset in FOOT:                                              # dno z fazką: 2 schodki, każdy węższy od wyższego (nie wiszą)
         parts.append(prism(S_out.buffer(-inset, join_style=1, quad_segs=8), z_prev, z1)); z_prev = z1
@@ -170,11 +189,11 @@ def render3d(tray, xs, floor, path):
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--len", type=float, default=LENGTH); ap.add_argument("--wid", type=float, default=WIDTH); ap.add_argument("--h", type=float, default=HEIGHT)
-    ap.add_argument("--floor", type=float, default=FLOOR); ap.add_argument("--wall", type=float, default=WALL); ap.add_argument("--exp", type=float, default=EXP)
+    ap.add_argument("--floor", type=float, default=FLOOR); ap.add_argument("--wall", type=float, default=WALL); ap.add_argument("--rad", type=float, default=RAD)
     ap.add_argument("--name", default="taca")
     a = ap.parse_args(argv)
     t0 = time.time(); os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
-    m, g = build(a.len, a.wid, a.h, a.floor, a.exp, a.wall)
+    m, g = build(a.len, a.wid, a.h, a.floor, a.rad, a.wall)
     from meshclean import clean_degenerate                              # STANDARD: zwiń mikro-trójkąty przed zapisem
     m, ci = clean_degenerate(m)
     path = os.path.join(HERE, "out", a.name + ".stl"); m.export(path)

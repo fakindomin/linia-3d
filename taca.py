@@ -1,12 +1,12 @@
-"""TACA: żebrowana taca owalna na renifery żebrowane i drobne elementy (240 x 56 x 30 mm, 3 szt. na stole P1S 256 x 256).
+"""TACA: żebrowana taca owalna na renifery żebrowane i drobne elementy (240 x 75 x 20 mm, 3 szt. na stole P1S 256 x 256).
 Obrys = superelipsa (wykładnik EXP: 2 = elipsa, 4+ = prawie prostokąt z zaokrąglonymi narożnikami); zewnętrzna ścianka ma pionowe żebra linii
-(amplituda ±RIB_AMP = 0,8 mm, rozstaw ok. 3,4 mm wzdłuż obwodu, grzbiet dokładnie na końcach osi, więc wymiary 240 x 56 są mierzone po grzbietach),
+(amplituda ±RIB_AMP = 0,8 mm, rozstaw ok. 3,4 mm wzdłuż obwodu, grzbiet dokładnie na końcach osi, więc wymiary 240 x 75 są mierzone po grzbietach),
 wnętrze GŁADKIE (łatwo odkurzyć i wytrzeć, renifery stoją prosto). Całość to wyciągnięcie obrysu w pionie: nic nie wisi, bez podpór.
-Druk: dnem do stołu, 3 szt. obok siebie (Y: 3 x 56 + 2 x 8 mm), PETG; dla pewnej przyczepności brim 5 mm (opcjonalnie).
+Druk: dnem do stołu, 3 szt. obok siebie (Y: 3 x 75 + 2 x 8 = 241 mm), PETG; dla pewnej przyczepności brim 5 mm (opcjonalnie).
   python3 taca.py                       -> out/taca.stl + out/taca.png (podgląd z reniferami dla skali)
-  python3 taca.py --wid 55 --h 30       inne wymiary; --exp 3.2 pełniejsze końce; --name taca_55
+  python3 taca.py --wid 57 --h 30       inne wymiary; --exp 3.6 pełniejsze końce; --name taca_57
 Kontrole (kod wyjścia 1 przy błędzie): wymiary po grzbietach, szczelność, 1 składowa, nawis > 55° = 0, ścianka w dolinie żebra >= 0,8 mm,
-mieści się N reniferów kręgla (podstawa Ø33, brzuch Ø53 na rancie) z luzem >= 0,5 mm i 3 sztuki na stole."""
+mieszczą się 4 renifery kręgle (podstawa Ø33, brzuch Ø44 na rancie 20 mm) z luzem >= 0,5 mm i 3 sztuki na stole."""
 import os, sys, math, time, argparse
 import numpy as np
 import trimesh
@@ -17,14 +17,15 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from lib import RIB_AMP, RIB_PITCH
 
 # ---- parametry (jedna definicja; Python = źródło prawdy) ----
-LENGTH, WIDTH, HEIGHT = 240.0, 57.0, 30.0     # wymiary zewnętrzne po grzbietach żeber [mm]
+LENGTH, WIDTH, HEIGHT = 240.0, 75.0, 20.0     # wymiary zewnętrzne po grzbietach żeber [mm]
 FLOOR = 2.4                                   # grubość dna [mm]
 WALL = 2.0                                    # ścianka od linii środkowej żeber do wnętrza; w dolinie żebra WALL - RIB_AMP = 1,2 mm
-EXP = 3.6                                     # wykładnik superelipsy (2 = elipsa; wyższy = pełniejsze końce)
+EXP = 2.5                                     # wykładnik superelipsy (2 = elipsa; wyższy = pełniejsze końce)
 FOOT = ((0.2, 0.30), (0.4, 0.15))             # fazka dolnej krawędzi: (wysokość schodka do [mm], cofnięcie obrysu [mm]); 2 schodki (nic nie wisi)
 K_PTS = 20                                    # punktów na jedno żebro
 PETG = 1.27                                   # g/cm3
-PITCH = 60.0                                  # rozstaw reniferów w rzędzie [mm] (brzuch Ø54,6 + 5 mm)
+PITCH = 58.0                                  # rozstaw reniferów w rzędzie [mm] (brzuch Ø54,6 + 3,4 mm)
+COUNT = 4                                     # tyle kręgli w rzędzie musi się zmieścić (kontrola)
 BED = (256.0, 256.0)                          # stół Bambu Lab P1S [mm]
 BED_GAP = 8.0                                 # odstęp między tacami na stole [mm]
 # renifer kręgiel (renifer_kregiel.py): promień korpusu od podstawy (z od stołu) i żebra
@@ -98,7 +99,7 @@ def overhang_55(m):
     return float(m.area_faces[(n[:, 2] < -math.sin(math.radians(55))) & (zc > 0.6)].sum())
 
 
-def reindeer_fit(S_in, floor, height, pitch=None, count=3, clearance_need=0.5):
+def reindeer_fit(S_in, floor, height, pitch=None, count=COUNT, clearance_need=0.5):
     """ile luzu (mm) ma renifer kręgiel na rancie ścianki (z = height od stołu tacy): korpus z żebrami do wysokości rantu wpisany w wnętrze tacy.
     Zwraca (luz minimalny dla `count` reniferów rozmieszczonych symetrycznie co `pitch`, pitch)."""
     r_rim = reindeer_r(height - floor) + RIB_AMP
@@ -182,7 +183,7 @@ def main(argv):
     e = r.extents
     oh = overhang_55(r)
     tw = thin_wall(g["S_out"], g["S_in"])
-    cl3, p3, xs3, r_rim = reindeer_fit(g["S_in"], a.floor, a.h, count=3)
+    cl3, p3, xs3, r_rim = reindeer_fit(g["S_in"], a.floor, a.h, count=COUNT)
     nmax = max_reindeer(g["S_in"], a.floor, a.h)
     bed_ok, need_y = bed_layout(e[0], e[1])
     cav_ml = (g["S_in"].area * (a.h - a.floor)) / 1000.0
@@ -191,11 +192,11 @@ def main(argv):
         ("szczelna, 1 składowa", r.is_watertight and comps == 1 and r.volume > 0),
         ("nawis > 55° = 0", oh < 1.0),
         ("ścianka w dolinie żebra >= 0,8 mm", tw >= 0.8),
-        ("3 renifery kręgle z luzem >= 0,5 mm na rancie", cl3 >= 0.5),
+        (f"{COUNT} renifery kręgle w rzędzie z luzem >= 0,5 mm na rancie", cl3 >= 0.5),
         ("3 tace na stole 256 x 256", bed_ok),
     ]
     print(f"{a.name}.stl: {e[0]:.1f} x {e[1]:.1f} x {e[2]:.1f} mm | N żeber {g['N']} | tr. {len(r.faces):,} | {r.volume / 1000:.1f} cm3 = {r.volume / 1000 * PETG:.0f} g PETG | wnęka {cav_ml:.0f} ml")
-    print(f"  ścianka w dolinie {tw:.2f} mm | korpus kręgla na rancie Ø{2 * r_rim:.1f} (z żebrami), luz do ścianki przy 3 reniferach co {p3:.0f} mm: {cl3:.2f} mm | "
+    print(f"  ścianka w dolinie {tw:.2f} mm | korpus kręgla na rancie Ø{2 * r_rim:.1f} (z żebrami), luz do ścianki przy {COUNT} reniferach co {p3:.0f} mm: {cl3:.2f} mm | "
           f"w rzędzie mieści się do {nmax} kręgli (rozstaw >= {REINDEER['total_w'] + 2.5:.0f} mm) | na stole: 3 tace = {need_y:.0f} mm w Y")
     for nme, ok in checks:
         print(f"  [{'PASS' if ok else 'FAIL'}] {nme}")

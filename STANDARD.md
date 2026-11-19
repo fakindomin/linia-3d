@@ -259,6 +259,15 @@ Cel: „porządne” jajko niespodzianka 44 × 68 mm z porożem renifera (czapka
 * **Grubsze oczka:** `--stitch 5.5 --row 4.4 --amp 0.7 --name renifer_kregiel_knit_gruby.stl` → oczko 5,5 × 4,5 mm (36 rzędów poziomych, 12 pionowych), 54,5 × 54,6 × 162,0 mm, 167 cm³, stopy 908 mm², slicer 0,0 mm² nawisu i 0 wysp przy 25° i 30°.
 * **Ograniczenia:** poroże i uszy to płaskie płytki 3,4–5 mm, więc oczka na nich są mniej regularne niż na korpusie (zwłaszcza na krawędziach); wersji z wymiennym porożem na czopach (`korpus` + `poroze_*`) jeszcze nie ma.
 
+## 9i. Pojemnik pikowany „jak z materiału” (`pikowany_pojemnik.py`)
+
+* **Cel:** kosz w stylu pikowanego (capitonné) materiału, wg zdjęcia z Instagrama (własna konstrukcja, nie kopia): prostokąt **200 × 140 × 100 mm** z zaokrąglonymi narożami (R 28), ścianki jak poduszki rozdzielone karbami wzdłuż rombowej siatki, w węzłach guziki z drobnymi fałdkami, zwinięty brzeg u góry, dwa otwory na uchwyt w krótkich ścianach. Wnętrze też pikowane (poduszki wypychają ściankę do środka).
+* **Pole F** liczone analitycznie, w plastrach z (`build_field`): `s` = długość łuku wzdłuż obrysu (liczba guzików w rzędzie jest całkowita: obwód 632 mm → 12 guzików co 52,7 mm), `z` = wysokość; rzędy guzików co 36 mm, co drugi przesunięty o pół rozstawu. Poduszka = `B · (sin(π f1) · sin(π f2))^0,6` w romie (f1, f2 = współrzędne między karbami), guzik = dołek 1,2 mm o promieniu ok. 4 mm + 8 fałdek (0,5 mm). Parametry: `--puff` (3,0 mm na zewnątrz), `--puff_in` (1,0 do środka), `--wall` (2,6 mm w karbach), `--dimple`, `--tuft`, `--row`, `--rad`.
+* **Bez podpór:** poduszki łagodnie (zbocza ok. 30° od pionu), brzeg i dolna krawędź zaokrąglone (`smin`), otwory uchwytu „domkiem” (boki 42° od poziomu), na końcu `nawisy.carve` (55° od pionu). Slicer (`nawisy.slicer_overhang`, warstwa 0,2 mm): **0,0 mm² nawisu i 0 wysp przy progu 25° i 30°**.
+* **Ścianka:** najcieńszy fragment (w guziku) 1,38 mm (kontrola `min_wall`, cel ≥ 1,2 mm = 3 linie dyszy 0,4); w karbach 2,6 mm, w środku poduszek do ok. 6,7 mm, zwinięty brzeg ok. 8 mm. Dno 3 mm.
+* **Wynik:** szczelny, 600 tys. trójkątów (30 MB), 360 cm³ (ok. 457 g PETG przy 100% wypełnienia; realna masa zależy od wypełnienia, polecane 3 ścianki i 10–15%), stopy 24 245 mm² (duża płaska powierzchnia: brim lub „mouse ears” w razie odklejania). Czas ok. 1 min.
+* **Ograniczenia:** brak wersji z wymiennym wkładem / pokrywą; kształt otworu uchwytu to ostrołuk, nie owal ze zdjęcia (owalny dach byłby nawisem).
+
 ## 10. Pliki
 
 Żebra (19 + 4 renifer kręgiel: `renifer_kregiel_calosc/korpus/poroze_prawe/poroze_lewe`): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
@@ -273,3 +282,4 @@ Jelenie: `jelen.py` (`jelen_stojacy.stl`, 50 mm), `jelen_siedzacy.py`, `jelen_je
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.
 Taca: `taca.py` (`taca.stl`, `taca.png`, `taca_3d.png`; sekcja 9f).
 Jeleń knitted: `knit.py` (silnik faktury dzianiny), `jelen_knit.py` (`jelen_knit_130.stl`, `jelen_knit_130.png`; sekcja 9g), `renifer_kregiel_knit.py` (`renifer_kregiel_knit.stl`, `.png`; sekcja 9h).
+Pojemnik pikowany: `pikowany_pojemnik.py` (`pojemnik_pikowany.stl`, `.png`; sekcja 9i).

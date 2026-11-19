@@ -255,7 +255,7 @@ def main():
         try:
             inter = trimesh.boolean.intersection([m, em], engine="manifold")
             vi = float(inter.volume) if len(inter.faces) else 0.0
-            dmin = float(trimesh.proximity.ProximityQuery(m).vertex(em.vertices)[1].min())
+            dmin = float(trimesh.proximity.ProximityQuery(m).on_surface(em.vertices[::3])[1].min())   # odleglosc punktow oka od powierzchni korpusu
             print(f"  oko {k + 1} w gniezdzie: interferencja {vi:.4f} mm3 | najmniejszy luz {dmin:.3f} mm", flush=True)
         except Exception as ex:
             print(f"  (kontrola pasowania oka {k + 1} pominieta: {ex})", flush=True)

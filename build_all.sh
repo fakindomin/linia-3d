@@ -41,6 +41,7 @@ python3 taca.py                         # taca.stl (zebrowana taca prostokatna z
 python3 jelen_knit.py                   # jelen_knit_130.stl (faktura dzianiny na wlasnym jeleniu, 130 mm; opcje --h --stitch --row --amp --check; ok. 3 min)
 python3 renifer_kregiel_knit.py         # renifer_kregiel_knit.stl (kregiel z fakturą dzianiny zamiast zeber, poroze i uszy przytopione; ok. 1 min)
 python3 pikowany_pojemnik.py            # pojemnik_pikowany.stl (pikowany kosz 200 x 140 x 100 mm, poduszki z karbami, guziki; ok. 1 min)
+# python3 krolik_knit.py /sciezka/Knitted__Easter_Bunny.stl   # krolik_knit.stl + krolik_knit_oczy.stl (wymaga wgranego, cudzego pliku STL - zakomentowane; ok. 5 min, szczyt 4,3 GB RAM)
 python3 etykieta.py Ania Tomek          # etykieta_<imie>.stl (poziomo: "Dla" + imie, szerokosc dopasowana)
 python3 build_test.py               # test_czop, test_gniazdo_blok (probka pasowania na drukarke)
 python3 build_std_ribbed_parts.py   # STANDARD v1.0: czesci zebrowane przyciete do koperty (nadpisuje wersje powyzej)

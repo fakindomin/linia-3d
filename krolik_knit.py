@@ -251,6 +251,14 @@ def main():
         em = eye_mesh(c, n, r_eye, rp, a.peglen, flat, a.gap)
         placed.append(em)
         plate.append(print_pose(em, c, n, (k - (len(info) - 1) / 2) * (2 * r_eye + 6.0)))
+    for k, em in enumerate(placed):                                  # pasowanie na gotowym pliku: interferencja (boolean) i najmniejszy luz oko - korpus
+        try:
+            inter = trimesh.boolean.intersection([m, em], engine="manifold")
+            vi = float(inter.volume) if len(inter.faces) else 0.0
+            dmin = float(trimesh.proximity.ProximityQuery(m).vertex(em.vertices)[1].min())
+            print(f"  oko {k + 1} w gniezdzie: interferencja {vi:.4f} mm3 | najmniejszy luz {dmin:.3f} mm", flush=True)
+        except Exception as ex:
+            print(f"  (kontrola pasowania oka {k + 1} pominieta: {ex})", flush=True)
     if plate:
         pe = trimesh.util.concatenate(plate)
         name_e = a.name.replace(".stl", "_oczy.stl")

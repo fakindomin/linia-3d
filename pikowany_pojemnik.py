@@ -155,8 +155,8 @@ def main():
     ap.add_argument("--rad", type=float, default=28.0, help="promien naroza obrysu [mm]")
     ap.add_argument("--puff", type=float, default=3.0, help="wypuklosc poduszek na zewnatrz [mm]")
     ap.add_argument("--puff_in", type=float, default=1.0, help="wypuklosc poduszek do srodka [mm]")
-    ap.add_argument("--wall", type=float, default=2.4, help="najcienszy fragment sciany (w karbach) [mm]")
-    ap.add_argument("--dimple", type=float, default=1.2, help="glebokosc guzika [mm] (sciana w guziku = wall - dimple >= 1,2)")
+    ap.add_argument("--wall", type=float, default=2.6, help="najcienszy fragment sciany (w karbach) [mm]")
+    ap.add_argument("--dimple", type=float, default=1.2, help="glebokosc guzika [mm] (sciana w guziku = wall - dimple >= 1,3)")
     ap.add_argument("--floor", type=float, default=3.0)
     ap.add_argument("--tuft", type=float, default=52.0, help="rozstaw guzikow w rzedzie [mm]")
     ap.add_argument("--row", type=float, default=36.0, help="odstep rzedow guzikow [mm]")
@@ -166,7 +166,7 @@ def main():
     ap.add_argument("--nohandle", action="store_true")
     ap.add_argument("--noview", action="store_true")
     a = ap.parse_args()
-    assert a.wall - a.dimple >= 1.2, "sciana w guziku cienka niz 1,2 mm"
+    assert a.wall - a.dimple >= 1.3, "sciana w guziku cienka niz 1,3 mm (pomiar po siatce schodzi ok. 0,02 mm ponizej)"
     t0 = time.time()
     axes, F = build_field(a.len, a.wid, a.h, a.rad, a.puff, a.puff_in, a.wall, a.floor, a.dimple, a.tuft, a.row, a.vox)
     print(f"pole F {F.shape} ({time.time() - t0:.0f} s)")

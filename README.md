@@ -20,6 +20,7 @@ python3 etykieta.py Ania Tomek    # poziome etykiety „Dla” + imię; `--cap 1
 python3 taca.py                    # taca żebrowana 240 × 75 × 20 mm (prostokąt z zaokrąglonymi narożnikami, ścianka z żebrami, gładkie wnętrze) na 4 renifery kręgle i drobiazgi; `--wid`, `--len`, `--h`, `--rad` (ok. 10 s)
 python3 jelen_knit.py             # jeleń „knitted” (faktura dzianiny: rzędy oczek zamiast żeber) 130 mm, bez podpór; `--h`, `--stitch`, `--row`, `--amp`, `--check` = porównanie nawisów z gładkim (ok. 3-5 min)
 python3 renifer_kregiel_knit.py     # renifer kręgiel „knitted” (oczka zamiast żeber, poroże i uszy przytopione, 54,6 × 54,6 × 162 mm), bez podpór; `--stitch`, `--row`, `--amp`, `--check` (ok. 1 min)
+python3 renifer_kregiel_knit.py --stitch 5.5 --row 4.4 --amp 0.7 --name renifer_kregiel_knit_gruby.stl   # to samo z grubszymi oczkami 5,5 × 4,5 mm
 python3 artifact/build_swieta.py # składa artefakt „Świąteczne dodatki” (etykieta, czubek, foremki; STL w przeglądarce); testy: `node artifact/test_swieta.js`, `python3 artifact/test_swieta.py`, `python3 artifact/test_swieta_ui.py`
 ./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
 python3 verify_all.py             # 217 kontroli standardu na gotowych plikach out/*.stl

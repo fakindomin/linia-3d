@@ -256,6 +256,7 @@ Cel: „porządne” jajko niespodzianka 44 × 68 mm z porożem renifera (czapka
 * **Faktura:** oczko 4,0 × 3,25 mm, wypukłość 0,5 mm (opcje `--stitch`, `--row`, `--amp`); rzędy poziome na korpusie i szyi (50 rzędów), pionowe na czubku głowy (16 rzędów). Szew między nimi widać na głowie jako cienką linię.
 * **Bez podpór:** slicer (`nawisy.slicer_overhang`, warstwa 0,2 mm): **0,0 mm² nawisu i 0 wysp przy progu 25° i 30°** (żebrowany: 0,0 / 0,7 mm² przy 30°). Stopy 917 mm² (żebrowany 847 mm²). Miara po ścianach trójkątów („nawis > 55°”): 7,0 mm².
 * **Wynik:** szczelny, 700 tys. trójkątów, 35 MB, 168 cm³ (żebrowany 159 cm³). Czas ok. 1 min; `--check` porównuje nawisy z `out/renifer_kregiel_calosc.stl`.
+* **Grubsze oczka:** `--stitch 5.5 --row 4.4 --amp 0.7 --name renifer_kregiel_knit_gruby.stl` → oczko 5,5 × 4,5 mm (36 rzędów poziomych, 12 pionowych), 54,5 × 54,6 × 162,0 mm, 167 cm³, stopy 908 mm², slicer 0,0 mm² nawisu i 0 wysp przy 25° i 30°.
 * **Ograniczenia:** poroże i uszy to płaskie płytki 3,4–5 mm, więc oczka na nich są mniej regularne niż na korpusie (zwłaszcza na krawędziach); wersji z wymiennym porożem na czopach (`korpus` + `poroze_*`) jeszcze nie ma.
 
 ## 10. Pliki

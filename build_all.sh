@@ -38,6 +38,7 @@ python3 foremki_piernik.py          # foremka_{choinka,renifer,balwan,ludzik,gwi
 python3 foremki_piernik.py --json     # artifact/swieta_outlines.json (obrysy foremek dla artefaktu)
 python3 czubek_choinkowy.py             # czubek_choinkowy.stl (dluga tuleja, pusta kula otwarta od dolu, iglica; opcje --top --sleeve --h --bulb)
 python3 taca.py                         # taca.stl (zebrowana taca prostokatna z zaokraglonymi narozami 240 x 75 x 20 mm) + taca.png, taca_3d.png (3d tylko gdy jest renifer_kregiel_calosc.stl)
+python3 jelen_knit.py                   # jelen_knit_130.stl (faktura dzianiny na wlasnym jeleniu, 130 mm; opcje --h --stitch --row --amp --check; ok. 3 min)
 python3 etykieta.py Ania Tomek          # etykieta_<imie>.stl (poziomo: "Dla" + imie, szerokosc dopasowana)
 python3 build_test.py               # test_czop, test_gniazdo_blok (probka pasowania na drukarke)
 python3 build_std_ribbed_parts.py   # STANDARD v1.0: czesci zebrowane przyciete do koperty (nadpisuje wersje powyzej)

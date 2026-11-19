@@ -240,6 +240,15 @@ Cel: „porządne” jajko niespodzianka 44 × 68 mm z porożem renifera (czapka
 * **Kontrole w skrypcie (kod 1 przy błędzie):** wymiary po grzbietach ±0,05 mm, szczelna i 1 składowa, nawis > 55° = 0 mm², ścianka ≥ 0,8 mm (zmierzone 1,20), 4 kręgle z luzem ≥ 0,5 mm, 3 tace na stole. `verify_print.py out/taca.stl` = PASS, 0 ostrzeżeń (ścianka wnęki p1 = 1,3 mm).
 * **Druk:** dnem do stołu, PETG, 0,2 mm; powierzchnia styku ≈ 171 cm² (duża, płaska: dla pewności brim 5 mm lub „mouse ears”, 3 tace osobnymi obiektami; przy 241 mm w Y brim 5 mm może nie zmieścić się dla 3 szt. obok siebie — wtedy 2 szt. z brimem). Podgląd: `out/taca.png` (z góry) i `out/taca_3d.png` (z reniferami; wymaga `python3 renifer_kregiel.py`).
 
+## 9g. Jeleń „knitted” — faktura dzianiny zamiast żeber (`knit.py`, `jelen_knit.py`)
+
+* **Cel:** ten sam własny jeleń co `jelen.py` (stojący, bez podpór), ale z „plecioną” skórą: rzędy oczek „V” jak na drutach / szydełku. Domyślnie **130 mm** wysokości (117,2 × 101,3 × 130,0 mm); `--h` zmienia skalę, oczka mają stały rozmiar w mm (większy jeleń = więcej oczek).
+* **Silnik (`knit.py`, `knit_F(F, axes, vox, ...)`):** działa na dowolnym polu F (dodatnie w środku, ≈ mm). Środki oczek z przekrojów F = 0: płaszczyzny z = const (rzędy poziome: tułów, nogi, szyja, poroże) i x = const (grzbiet, czubek głowy; przełączenie przy |n_z| 0,62–0,72). Każda pętla przekroju dzielona na całkowitą liczbę oczek, start w jednym punkcie (max x / max z) → kolumny oczek układają się pionowo. Oczko = dwie ukośne nitki „V” (`leg` = (0,38; 0,62; 0,72)), profil nitki h = A (1 − (d/w)²)², F' = F + m (h − A/2).
+* **Parametry:** oczko `--stitch` 4,0 mm × `--row` 3,3 mm (wysokość rzędu zaokrąglana do wielokrotności kroku siatki), wypukłość `--amp` 0,5 mm, nitka ≈ 2 mm szerokości (≥ 5 linii dyszy 0,4), boki nitki ≤ ok. 45° od pionu (< 55° standardu). Siatka `--vox` 0,3 mm.
+* **Bez podpór:** amplituda gaśnie na powierzchniach patrzących w dół (n_z < −0,09 → 0 przy −0,42) i przy stole (z < 1–2 mm), więc stopy są płaskie i identyczne jak w gładkim (917 mm²), a obcięcie nawisów z `nawisy.carve` (58° od pionu) dalej obowiązuje. Zmierzone slicerem Bambu-jak (`nawisy.slicer_overhang`, warstwa 0,2 mm): **0,0 mm² nawisu i 0 wysp przy progu 25° i 30°**, tak samo jak gładki jeleń 130 mm. Uwaga: miara „nawis > 55°” z raportu (po ścianach trójkątów) na fakturze jest zawyżona (ok. 1800 mm²) i nie ma znaczenia — decyduje pomiar warstwowy.
+* **Wynik:** szczelny, 700 tys. trójkątów (35 MB STL, odchyłka decymacji maks. 0,004 mm), 250 cm³ (ok. 317 g PETG przy 100% wypełnienia; realna masa zależy od wypełnienia i ścianek). Czas: ok. 3 min (z `--check`, czyli porównaniem z gładkim, ok. 5 min); gładkie pole F jest buforowane w `/tmp/jelen_knit_cache` (zmienna `KNIT_CACHE`).
+* **Ograniczenia:** cienkie krawędzie (brzeg ucha, końcówki poroża) mają nieregularne oczka — pętle krótsze niż 7 mm są gładkie; szew między rzędami poziomymi i pionowymi (grzbiet, głowa) widać jako łagodną zmianę kierunku oczek. Pozostałe pozy jeleni i renifer kręgiel można dostać tą samą ścieżką: `knit_F` na ich polu F.
+
 ## 10. Pliki
 
 Żebra (19 + 4 renifer kręgiel: `renifer_kregiel_calosc/korpus/poroze_prawe/poroze_lewe`): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
@@ -253,3 +262,4 @@ Foremki, czubek, etykiety (sekcja 9e): `foremki_piernik.py` (`foremka_*.stl` + `
 Jelenie: `jelen.py` (`jelen_stojacy.stl`, 50 mm), `jelen_siedzacy.py`, `jelen_jelonek.py`, `jelen_lezacy.py` (`jelen_*.stl`), gładkie, własna geometria z pól odległości, naprawa nawisów w `nawisy.py` (sekcja 9c).
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.
 Taca: `taca.py` (`taca.stl`, `taca.png`, `taca_3d.png`; sekcja 9f).
+Jeleń knitted: `knit.py` (silnik faktury dzianiny), `jelen_knit.py` (`jelen_knit_130.stl`, `jelen_knit_130.png`; sekcja 9g).

@@ -249,6 +249,15 @@ Cel: „porządne” jajko niespodzianka 44 × 68 mm z porożem renifera (czapka
 * **Wynik:** szczelny, 700 tys. trójkątów (35 MB STL, odchyłka decymacji maks. 0,004 mm), 250 cm³ (ok. 317 g PETG przy 100% wypełnienia; realna masa zależy od wypełnienia i ścianek). Czas: ok. 3 min (z `--check`, czyli porównaniem z gładkim, ok. 5 min); gładkie pole F jest buforowane w `/tmp/jelen_knit_cache` (zmienna `KNIT_CACHE`).
 * **Ograniczenia:** cienkie krawędzie (brzeg ucha, końcówki poroża) mają nieregularne oczka — pętle krótsze niż 7 mm są gładkie; szew między rzędami poziomymi i pionowymi (grzbiet, głowa) widać jako łagodną zmianę kierunku oczek. Pozostałe pozy jeleni i renifer kręgiel można dostać tą samą ścieżką: `knit_F` na ich polu F.
 
+## 9h. Renifer kręgiel „knitted” (`renifer_kregiel_knit.py`)
+
+* **Cel:** ten sam duży renifer co `renifer_kregiel_calosc.stl` (korpus-kręgiel, jajowata głowa, poroże 3 poziomy, boczne uszy-liście), ale zamiast pionowych żeber skóra z rzędów oczek „V” (silnik `knit.py`, sekcja 9g). Jeden wydruk: poroże i uszy przytopione do głowy, dnem do stołu, bez podpór.
+* **Gładki korpus:** `renifer_kregiel.body_field` z `ribs = 0` (promień profilu + amplituda żeber = grzbiety żeber), pole obniżone o `amp / 2`, więc szczyty oczek leżą na wysokości grzbietów żeber: wymiar **54,6 × 54,6 × 162,1 mm** (żebrowany: 54,6 × 54,6 × 162,4), pasowanie na tacę (`taca.py`) bez zmian. `knit_F(..., renorm=True)`: pole profilu nie jest odległością (|∇F| > 1 na skosach), więc przesunięcie liczone w prawdziwych mm.
+* **Faktura:** oczko 4,0 × 3,25 mm, wypukłość 0,5 mm (opcje `--stitch`, `--row`, `--amp`); rzędy poziome na korpusie i szyi (50 rzędów), pionowe na czubku głowy (16 rzędów). Szew między nimi widać na głowie jako cienką linię.
+* **Bez podpór:** slicer (`nawisy.slicer_overhang`, warstwa 0,2 mm): **0,0 mm² nawisu i 0 wysp przy progu 25° i 30°** (żebrowany: 0,0 / 0,7 mm² przy 30°). Stopy 917 mm² (żebrowany 847 mm²). Miara po ścianach trójkątów („nawis > 55°”): 7,0 mm².
+* **Wynik:** szczelny, 700 tys. trójkątów, 35 MB, 168 cm³ (żebrowany 159 cm³). Czas ok. 1 min; `--check` porównuje nawisy z `out/renifer_kregiel_calosc.stl`.
+* **Ograniczenia:** poroże i uszy to płaskie płytki 3,4–5 mm, więc oczka na nich są mniej regularne niż na korpusie (zwłaszcza na krawędziach); wersji z wymiennym porożem na czopach (`korpus` + `poroze_*`) jeszcze nie ma.
+
 ## 10. Pliki
 
 Żebra (19 + 4 renifer kręgiel: `renifer_kregiel_calosc/korpus/poroze_prawe/poroze_lewe`): `korpus_bazowy`, `krolik_calosc`, `renifer_calosc`, `ucho_prawe/lewe`, `ucho_dlugie_prawe/lewe`, `poroze_prawe/lewe`, `jajko_miseczka`, `jajko_czapka_gniazda`,
@@ -262,4 +271,4 @@ Foremki, czubek, etykiety (sekcja 9e): `foremki_piernik.py` (`foremka_*.stl` + `
 Jelenie: `jelen.py` (`jelen_stojacy.stl`, 50 mm), `jelen_siedzacy.py`, `jelen_jelonek.py`, `jelen_lezacy.py` (`jelen_*.stl`), gładkie, własna geometria z pól odległości, naprawa nawisów w `nawisy.py` (sekcja 9c).
 Podgląd: `export_line_json.py` (→ `line.json`), `build_artifact.py` + `artifact/` (`zebrowana_kolekcja.src.html`, `line_core.js`), `test_artifact.py` + `test_artifact.js`.
 Taca: `taca.py` (`taca.stl`, `taca.png`, `taca_3d.png`; sekcja 9f).
-Jeleń knitted: `knit.py` (silnik faktury dzianiny), `jelen_knit.py` (`jelen_knit_130.stl`, `jelen_knit_130.png`; sekcja 9g).
+Jeleń knitted: `knit.py` (silnik faktury dzianiny), `jelen_knit.py` (`jelen_knit_130.stl`, `jelen_knit_130.png`; sekcja 9g), `renifer_kregiel_knit.py` (`renifer_kregiel_knit.stl`, `.png`; sekcja 9h).

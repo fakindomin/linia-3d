@@ -19,6 +19,7 @@ python3 czubek_choinkowy.py       # wydłużony czubek choinkowy: długa tuleja,
 python3 etykieta.py Ania Tomek    # poziome etykiety „Dla” + imię; `--cap 12` = wyższe litery (kilka sekund)
 python3 taca.py                    # taca żebrowana 240 × 75 × 20 mm (prostokąt z zaokrąglonymi narożnikami, ścianka z żebrami, gładkie wnętrze) na 4 renifery kręgle i drobiazgi; `--wid`, `--len`, `--h`, `--rad` (ok. 10 s)
 python3 jelen_knit.py             # jeleń „knitted” (faktura dzianiny: rzędy oczek zamiast żeber) 130 mm, bez podpór; `--h`, `--stitch`, `--row`, `--amp`, `--check` = porównanie nawisów z gładkim (ok. 3-5 min)
+python3 renifer_kregiel_knit.py     # renifer kręgiel „knitted” (oczka zamiast żeber, poroże i uszy przytopione, 54,6 × 54,6 × 162 mm), bez podpór; `--stitch`, `--row`, `--amp`, `--check` (ok. 1 min)
 python3 artifact/build_swieta.py # składa artefakt „Świąteczne dodatki” (etykieta, czubek, foremki; STL w przeglądarce); testy: `node artifact/test_swieta.js`, `python3 artifact/test_swieta.py`, `python3 artifact/test_swieta_ui.py`
 ./build_all.sh                    # wszystko od zera + verify_all.py + verify_print.py (15-20 min)
 python3 verify_all.py             # 217 kontroli standardu na gotowych plikach out/*.stl
@@ -57,6 +58,7 @@ python3 test_artifact.py          # podgląd (Node) kontra Python: profile, port
 | `etykieta.py` | pozioma etykieta na prezent: „Dla” + imię (Poppins Bold, polskie znaki), szerokość dopasowana do imienia, otwór Ø 4,2 mm, płytka 2 mm + napis 0,8 mm, druk na płasko; ten sam algorytm w artefakcie (`artifact/swieta_core.js`) |
 | `taca.py` | żebrowana taca prostokątna 240 × 75 × 20 mm z zaokrąglonymi narożnikami (R 15, pionowe żebra po zewnętrznej ściance, gładkie wnętrze, dno 2,4 mm): 4 renifery kręgle w rzędzie z luzem 8,4 mm na rancie, 3 szt. na stole P1S, druk bez podpór; podgląd z góry i 3D |
 | `knit.py` / `jelen_knit.py` | faktura dzianiny (oczka „V” w rzędach i kolumnach, wypukłość 0,5 mm) nakładana na dowolne pole odległości F; `jelen_knit.py` = własny jeleń 130 mm „knitted”, 0 mm² nawisu w slicerze (25°/30°), stopy jak w gładkim |
+| `renifer_kregiel_knit.py` | duży renifer kręgiel w wersji „knitted” (faktura dzianiny z `knit.py` zamiast żeber): ten sam obrys i wymiar po grzbietach 54,6 mm (pasuje na tacę), poroże i uszy przytopione, 0 mm² nawisu w slicerze (25° / 30°) |
 | `artifact/swieta.src.html` | artefakt „Świąteczne dodatki”: wpisujesz imię / ustawiasz rozmiar i pobierasz gotowy STL (w ZIP); geometria w `swieta_core.js`, zgodna z Pythonem co do objętości |
 | `verify_all.py` | kontrola standardu na 38 plikach (siatki, nawisy, koperty, pasowanie 2×4, żebra, M) |
 | `verify_print.py` | kontrola druku każdego STL: szczelność, orientacja, zdegenerowane, pyłki, ściśnięte wierzchołki, samoprzecięcia, ścianki wnęk; `--selftest` |

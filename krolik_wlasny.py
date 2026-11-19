@@ -82,6 +82,24 @@ def quick_preview(m, eyes, path):
     W.save(path)
 
 
+def render_views(body, eyes, outdir, W=444, H=720, ss=2, ext=7.0):
+    """4 ujecia do artefaktu 'Modele 3D' (przod, ukos, bok, tyl): PNG 444 x 720, przezroczyste tlo, korpus czerwony, oczy ciemne (dla czytelnosci);
+    render w podwojnej rozdzielczosci i zmniejszony (gladkie krawedzie)"""
+    import render
+    from PIL import Image
+    os.makedirs(outdir, exist_ok=True)
+    SENT = (1, 254, 3)
+    base, dark = (205, 46, 36), (52, 54, 60)
+    for name, yaw, pitch in (("przod", -90, 5), ("ukos", -40, 8), ("bok", 0, 5), ("tyl", 90, 5)):
+        im = np.asarray(render.render([body] + list(eyes), yaw=yaw, pitch=pitch, W=W * ss, H=H * ss, ext=ext * ss, colors=[base] + [dark] * len(eyes), bg=SENT, dens=10.0))
+        mask = np.any(im != np.array(SENT, np.uint8), axis=2)
+        rgb = im.copy()
+        rgb[~mask] = base                                              # brzegi mieszaja sie z kolorem modelu, bez bialej obwodki
+        out = Image.fromarray(np.dstack([rgb, (mask * 255).astype(np.uint8)]), "RGBA").resize((W, H), Image.LANCZOS)
+        out.save(os.path.join(outdir, name + ".png"))
+    print(f"  ujecia zapisane w {outdir}", flush=True)
+
+
 def place_eyes(F, axes, vox, S, inside=0.4):
     """srodki oczu na powierzchni gladkiej glowy (srodek 'inside' mm pod powierzchnia) + normalne zewnetrzne"""
     out = []
@@ -109,9 +127,18 @@ def main():
     ap.add_argument("--target", type=int, default=900000)
     ap.add_argument("--name", default="krolik_wlasny.stl")
     ap.add_argument("--noview", action="store_true")
+    ap.add_argument("--views", metavar="KATALOG", help="tylko 4 ujecia PNG (przod, ukos, bok, tyl) gotowego out/<name> z oczami na miejscu, do artefaktu Modele 3D")
     a = ap.parse_args()
     S = a.h / H_DESIGN
     t0 = time.time()
+    if a.views:
+        axes, F = smooth_F(S, a.vox)
+        r_eye = EYE_R * S
+        rp = min(a.peg / 2, 0.55 * r_eye)
+        flat = r_eye * (1 - np.cos(np.radians(35.0)))
+        placed = [KK.eye_mesh(c, n, r_eye, rp, a.peglen, flat, a.gap) for c, n, _ in place_eyes(F, axes, a.vox, S)]
+        render_views(trimesh.load(os.path.join(OUT, a.name)), placed, a.views)
+        return
     if a.quick:
         axes, F = smooth_F(S, a.vox)
         m = mesh_from_F(F, axes, a.vox)

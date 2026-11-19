@@ -102,15 +102,16 @@ def _height(P, tree, C, T, PW, vdir, q, A, w, leg=(0.5, 0.5, 0.5), k=8):
 
 
 def knit_F(F, axes, vox, p=4.0, q=3.2, A=0.5, wf=0.72, z_floor=1.0, nz_fade=(-0.42, -0.09), band=2.2, nz_x=(0.62, 0.72),
-           min_len=7.0, chunk=400000, verbose=True, mask_extra=None, leg=(0.38, 0.62, 0.72)):
+           min_len=7.0, chunk=400000, verbose=True, mask_extra=None, leg=(0.38, 0.62, 0.72), renorm=False):
     """F -> F' z faktura dzianiny. p = szerokosc oczka, q = wysokosc rzedu [mm], A = wysokosc wypuklosci, wf = pol-szerokosc nitki jako ulamek odstepu nitek,
     z_floor = ponizej tej wysokosci (mm) gladko (stopy plasko na stole), nz_fade = (n_z, gdzie amplituda = 0; n_z, gdzie = pelna) dla normalnej zewnetrznej (stropy w dol),
     nz_x = zakres |n_z|, w ktorym rzedy przechodza z poziomych (z) na pionowe (x, czubek glowy i grzbiet); mask_extra(P, n) -> maska 0..1 (opcjonalnie),
-    leg = (u_gora/p, v_dol/q, v_gora/q): ksztalt oczka 'V' (czubek na (0, -v_dol q), konce nitek na (+-u_gora p, +v_gora q))"""
+    leg = (u_gora/p, v_dol/q, v_gora/q): ksztalt oczka 'V' (czubek na (0, -v_dol q), konce nitek na (+-u_gora p, +v_gora q)),
+    renorm = True dla pol, ktore nie sa odlegloscia (np. promien profilu minus rho: |grad F| > 1 na skosach): przesuniecie liczone w prawdziwych mm"""
     import time
     t0 = time.time()
     x, y, z = axes
-    idx = np.nonzero(np.abs(F) < band)
+    idx = np.nonzero(np.abs(F) < band * (1.6 if renorm else 1.0))
     ii, jj, kk = (a.astype(np.int32) for a in idx)
     del idx
     M = len(ii)
@@ -122,9 +123,11 @@ def knit_F(F, axes, vox, p=4.0, q=3.2, A=0.5, wf=0.72, z_floor=1.0, nz_fade=(-0.
     j1, j0 = np.minimum(jj + 1, ny - 1), np.maximum(jj - 1, 0)
     k1, k0 = np.minimum(kk + 1, nzv - 1), np.maximum(kk - 1, 0)
     N = np.stack([-(F[i1, jj, kk] - F[i0, jj, kk]), -(F[ii, j1, kk] - F[ii, j0, kk]), -(F[ii, jj, k1] - F[ii, jj, k0])], 1).astype(np.float32)
+    gm = np.linalg.norm(N, axis=1) / (2.0 * vox)            # |grad F| (1 dla pola odleglosci)
     N /= (np.linalg.norm(N, axis=1, keepdims=True) + 1e-9)
     del i1, i0, j1, j0, k1, k0
     Fb = F[ii, jj, kk]
+    gm = np.clip(gm, 0.5, 3.0).astype(np.float32) if renorm else np.ones(M, np.float32)
     fam = {}                                                 # srodki oczek z dwoch rodzin rzedow
     for f in ("z", "x"):
         r = _loops(F, axes, vox, f, q, p, min_len)
@@ -153,9 +156,9 @@ def knit_F(F, axes, vox, p=4.0, q=3.2, A=0.5, wf=0.72, z_floor=1.0, nz_fade=(-0.
     m = m * _smooth(P[:, 2], z_floor * 0.6, z_floor * 2.0)   # przy stole gladko
     if mask_extra is not None:
         m = m * mask_extra(P, N)
-    win = 1.0 - _smooth(np.abs(Fb), band - 1.0, band)        # okno: przesuniecie gasnie na brzegu pasa
+    win = 1.0 - _smooth(np.abs(Fb) / gm, band - 1.0, band)   # okno: przesuniecie gasnie na brzegu pasa (odleglosc = F / |grad F|)
     F2 = F.copy()
-    F2[ii, jj, kk] = Fb + (win * m * (h - A / 2)).astype(np.float32)
+    F2[ii, jj, kk] = Fb + (win * m * (h - A / 2) * gm).astype(np.float32)
     if verbose:
         print(f"  faktura nalozona ({time.time() - t0:.0f} s), sr. h w pasie {h.mean():.3f} mm")
     return F2

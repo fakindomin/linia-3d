@@ -46,10 +46,10 @@ def design(P):
     D = smin(D, ell(P, (-21.5, 0, 17.0), (5.5, 5.2, 5.2)), 2.5)          # ogon
     for s in (-1.0, 1.0):
         D = smin(D, ell(P, (19.0, s * 6.4, 49.0), (6.0, 4.6, 4.6)), 3.0)                       # policzek
-        D = smin(D, ell(P, (-3.5, s * 12.0, 13.0), (13.0, 6.5, 12.0)), 4.5)                    # udo
-        D = smin(D, cap(P, (-4.0, s * 11.0, 3.6), (15.0, s * 10.5, 3.2), 3.8, 3.2), 3.0)       # tylna stopa wysunieta do przodu
-        D = smin(D, cap(P, (12.0, s * 6.8, 28.0), (19.0, s * 6.2, 4.5), 4.6, 3.8), 3.0)        # przednia noga
-        D = smin(D, ell(P, (20.5, s * 6.4, 3.6), (5.5, 3.8, 3.6)), 2.5)                         # przednia lapa
+        D = smin(D, ell(P, (-3.5, s * 12.0, 10.0), (13.0, 6.5, 13.5)), 4.5)                    # udo (ciete stolem)
+        D = smin(D, cap(P, (-4.0, s * 11.0, 2.4), (15.0, s * 10.5, 2.2), 3.8, 3.4), 3.0)       # tylna stopa wysunieta do przodu (ciete stolem)
+        D = smin(D, cap(P, (12.0, s * 6.8, 28.0), (19.0, s * 6.2, 2.5), 4.6, 3.8), 3.0)        # przednia noga
+        D = smin(D, ell(P, (20.5, s * 6.4, 2.2), (5.5, 3.8, 3.6)), 2.5)                         # przednia lapa (ciete stolem)
         D = smin(D, ear(P, (6.5, s * 7.0, 77.0), (-0.12, s * 0.30, 0.95), (0.94, s * 0.34, 0.0), 17.0, 6.8, 3.3), 3.0)   # ucho
     return D
 
@@ -113,11 +113,11 @@ def main():
     S = a.h / H_DESIGN
     t0 = time.time()
     if a.quick:
-        axes, F = smooth_F(S, 0.4)
-        m = mesh_from_F(F, axes, 0.4)
+        axes, F = smooth_F(S, a.vox)
+        m = mesh_from_F(F, axes, a.vox)
         m.apply_translation([0, 0, -m.bounds[0][2]])
         print(f"quick: {m.extents.round(1)} mm, V {m.volume / 1000:.1f} cm3 ({time.time() - t0:.0f} s)")
-        ev = place_eyes(F, axes, 0.4, S)
+        ev = place_eyes(F, axes, a.vox, S)
         for c, n, fc in ev:
             print(f"  oko: srodek {np.round(c, 1)}, F = {fc:+.2f}, n {np.round(n, 2)}")
         m.export("/tmp/krolik_wlasny_quick.stl")

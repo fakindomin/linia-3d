@@ -1,7 +1,7 @@
 """Renifer KREGIEL 'knitted': ten sam renifer co w renifer_kregiel.py (smukly korpus-kregiel, jajowata glowa, poroze o 3 poziomach, boczne uszy-liscie),
 ale zamiast pionowych zeber skora z rzedow oczek (knit.py). Jeden wydruk: poroze i uszy przytopione do glowy, bez podpor, dnem do stolu.
   python3 renifer_kregiel_knit.py              -> out/renifer_kregiel_knit.stl (+ .png podglad)
-  python3 renifer_kregiel_knit.py --stitch 5 --row 4 --amp 0.6   (grubsze oczka)
+  python3 renifer_kregiel_knit.py --stitch 5.5 --row 4.4 --amp 0.7 --name renifer_kregiel_knit_gruby.stl   (grubsze oczka)
   python3 renifer_kregiel_knit.py --check      -> dodatkowo nawisy jak slicer (25 / 30 st.) w porownaniu z zebrowanym renifer_kregiel_calosc.stl
 Gladki korpus = bunny_F z 0 zeber (promien profilu + amplituda zeber = grzbiety zeber), wiec szczyty oczek leza na wysokosci grzbietow zeber:
 wymiar po grzbietach (54,6 mm) i pasowanie na tace (taca.py) zostaja takie jak w zebrowanym."""
@@ -36,6 +36,18 @@ def report_overhang(m, label):
         print(f"  {label}: slicer {thr:.0f} st.: nawis {o['area']:.1f} mm2 | wyspy w powietrzu {o['floating']:.2f} mm2 | najszersze {o['width']:.2f} mm (z = {o['z']:.1f})")
 
 
+def preview(m, path):
+    """podglad: trzy ujecia obok siebie (render.render)"""
+    import render
+    from PIL import Image
+    c, cz = m.bounds.mean(0), m.extents[2] / 2
+    imgs = [render.render([m], yaw=y, pitch=p, W=800, H=1100, ext=6.2, center=(c[0], cz)) for y, p in ((0, 6), (-40, 12), (130, 12))]
+    W = Image.new("RGB", (2400, 1100), "white")
+    for i, im in enumerate(imgs):
+        W.paste(im, (800 * i, 0))
+    W.save(path)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--vox", type=float, default=0.25)
@@ -65,6 +77,7 @@ def main():
     save(m, a.name, True, f"renifer kregiel knitted: oczka {a.stitch} x {a.row} mm, wypuklosc {a.amp} mm, poroze i uszy przytopione, bez podpor")
     m = trimesh.load(os.path.join(OUT, a.name))
     print(f"knitted: {m.extents.round(1)} mm | V {m.volume / 1000:.1f} cm3 | stopy {contact_area(m):.0f} mm2 ({time.time() - t0:.0f} s)")
+    preview(m, os.path.join(OUT, a.name.replace(".stl", ".png")))
     if a.check:
         report_overhang(m, "knitted")
     return m
